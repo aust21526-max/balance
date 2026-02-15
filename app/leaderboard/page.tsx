@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, ArrowLeft, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
-import { getLeaderboard } from '@/lib/supabase-api';
+import { getLeaderboard } from '@/lib/d1-api';
 import { Question } from '@/lib/mock-data';
 import CommentModal from '@/components/CommentModal';
 

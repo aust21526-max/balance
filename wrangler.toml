@@ -1,0 +1,12 @@
+name = "balance-game"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".vercel/output/static"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "balance-db"
+database_id = "4e0f6a90-70d0-4fd6-be42-25fdde4d7cab"
+
+[observability]
+enabled = true

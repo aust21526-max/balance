@@ -1,4 +1,4 @@
-import { getOneRandomQuestion } from '@/lib/supabase-api';
+import { getOneRandomQuestion } from '@/lib/d1-api';
 import VoteInterface from '@/components/VoteInterface';
 import { MOCK_QUESTION } from '@/lib/mock-data';
 

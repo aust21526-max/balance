@@ -9,7 +9,7 @@ import ShareButtons from './ShareButtons';
 import SubmitQuestionModal from './SubmitQuestionModal';
 import PeekStats from './PeekStats';
 import CommentModal from './CommentModal';
-import { incrementVote } from '@/lib/supabase-api';
+import { incrementVote } from '@/lib/d1-api';
 
 interface VoteInterfaceProps {
     initialQuestion: Question;

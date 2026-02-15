@@ -4,120 +4,130 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, AlertCircle } from 'lucide-react';
 import { moderateContent } from '@/app/actions';
+import { submitQuestion } from '@/lib/d1-api';
 
-// ... inside component ...
+interface SubmitQuestionModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+}
 
-const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!optionA.trim() || !optionB.trim()) return;
+export default function SubmitQuestionModal({ isOpen, onClose }: SubmitQuestionModalProps) {
+    const [optionA, setOptionA] = useState('');
+    const [optionB, setOptionB] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-    setIsSubmitting(true);
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!optionA.trim() || !optionB.trim()) return;
 
-    // Verify with AI Moderation Server Action
-    try {
-        const data = await moderateContent(optionA + " " + optionB);
+        setIsSubmitting(true);
 
-        if (!data.approved) {
-            setSubmitStatus('error');
-            alert("AI가 부적절한 내용을 감지하여 등록이 거부되었습니다.\n(사유: " + data.reason + ")");
-            setIsSubmitting(false);
-            return;
+        // Verify with AI Moderation Server Action
+        try {
+            const data = await moderateContent(optionA + " " + optionB);
+
+            if (!data.approved) {
+                setSubmitStatus('error');
+                alert("AI가 부적절한 내용을 감지하여 등록이 거부되었습니다.\n(사유: " + data.reason + ")");
+                setIsSubmitting(false);
+                return;
+            }
+        } catch (e) {
+            console.error("Moderation check failed", e);
         }
-    } catch (e) {
-        console.error("Moderation check failed", e);
-    }
 
-    // Real Supabase Submission
-    try {
-        await submitQuestion(`${optionA} vs ${optionB}`, optionA, optionB);
+        // Real Supabase Submission
+        try {
+            await submitQuestion(`${optionA} vs ${optionB}`, optionA, optionB);
 
-        setSubmitStatus('success');
-        setTimeout(() => {
-            onClose();
-            setOptionA('');
-            setOptionB('');
-            setSubmitStatus('idle');
-            alert("질문이 등록되었습니다! (즉시 반영됨)");
-        }, 1000);
+            setSubmitStatus('success');
+            setTimeout(() => {
+                onClose();
+                setOptionA('');
+                setOptionB('');
+                setSubmitStatus('idle');
+                alert("질문이 등록되었습니다! (즉시 반영됨)");
+            }, 1000);
 
-    } catch (error) {
-        console.error("Submission failed", error);
-        setSubmitStatus('error');
-        alert("질문 등록에 실패했습니다. 다시 시도해주세요.");
-        setIsSubmitting(false);
-    }
-};
+        } catch (error) {
+            console.error("Submission failed", error);
+            setSubmitStatus('error');
+            alert("질문 등록에 실패했습니다. 다시 시도해주세요.");
+            setIsSubmitting(false);
+        }
+    };
 
-return (
-    <AnimatePresence>
-        {isOpen && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-                    onClick={onClose}
-                />
-
-                <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.9, opacity: 0 }}
-                    className="bg-[#1E1E1E] w-full max-w-md rounded-2xl border border-white/10 p-6 relative z-10 shadow-2xl"
-                >
-                    <button
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
                         onClick={onClose}
-                        className="absolute top-4 right-4 text-white/50 hover:text-white"
+                    />
+
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.9, opacity: 0 }}
+                        className="bg-[#1E1E1E] w-full max-w-md rounded-2xl border border-white/10 p-6 relative z-10 shadow-2xl"
                     >
-                        <X size={24} />
-                    </button>
-
-                    <h2 className="text-xl font-bold text-white mb-6">나만의 밸런스 게임 만들기</h2>
-
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                        <div className="space-y-2">
-                            <label className="text-sm text-balance-red font-bold">옵션 A (Red)</label>
-                            <input
-                                type="text"
-                                value={optionA}
-                                onChange={(e) => setOptionA(e.target.value)}
-                                placeholder="예: 평생 라면만 먹기"
-                                className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-balance-red transition-colors"
-                                maxLength={50}
-                            />
-                        </div>
-
-                        <div className="flex justify-center text-white/20 font-mono font-bold">VS</div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm text-balance-blue font-bold">옵션 B (Blue)</label>
-                            <input
-                                type="text"
-                                value={optionB}
-                                onChange={(e) => setOptionB(e.target.value)}
-                                placeholder="예: 평생 밥만 먹기"
-                                className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-balance-blue transition-colors"
-                                maxLength={50}
-                            />
-                        </div>
-
-                        <div className="mt-4 p-3 bg-white/5 rounded-lg text-xs text-white/60 flex gap-2 items-start">
-                            <AlertCircle size={14} className="mt-0.5 shrink-0" />
-                            <p>AI가 내용을 자동 검수하며, 중복된 질문은 등록되지 않습니다.</p>
-                        </div>
-
                         <button
-                            type="submit"
-                            disabled={isSubmitting || !optionA || !optionB}
-                            className="w-full bg-white text-black font-bold py-4 rounded-xl mt-2 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+                            onClick={onClose}
+                            className="absolute top-4 right-4 text-white/50 hover:text-white"
                         >
-                            {isSubmitting ? 'AI 검수 중...' : '등록하기'}
+                            <X size={24} />
                         </button>
-                    </form>
-                </motion.div>
-            </div>
-        )}
-    </AnimatePresence>
-);
+
+                        <h2 className="text-xl font-bold text-white mb-6">나만의 밸런스 게임 만들기</h2>
+
+                        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm text-balance-red font-bold">옵션 A (Red)</label>
+                                <input
+                                    type="text"
+                                    value={optionA}
+                                    onChange={(e) => setOptionA(e.target.value)}
+                                    placeholder="예: 평생 라면만 먹기"
+                                    className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-balance-red transition-colors"
+                                    maxLength={50}
+                                />
+                            </div>
+
+                            <div className="flex justify-center text-white/20 font-mono font-bold">VS</div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm text-balance-blue font-bold">옵션 B (Blue)</label>
+                                <input
+                                    type="text"
+                                    value={optionB}
+                                    onChange={(e) => setOptionB(e.target.value)}
+                                    placeholder="예: 평생 밥만 먹기"
+                                    className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-balance-blue transition-colors"
+                                    maxLength={50}
+                                />
+                            </div>
+
+                            <div className="mt-4 p-3 bg-white/5 rounded-lg text-xs text-white/60 flex gap-2 items-start">
+                                <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                                <p>AI가 내용을 자동 검수하며, 중복된 질문은 등록되지 않습니다.</p>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={isSubmitting || !optionA || !optionB}
+                                className="w-full bg-white text-black font-bold py-4 rounded-xl mt-2 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+                            >
+                                {isSubmitting ? 'AI 검수 중...' : '등록하기'}
+                            </button>
+                        </form>
+                    </motion.div>
+                </div>
+            )}
+        </AnimatePresence>
+    );
 }

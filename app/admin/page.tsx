@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getAllQuestions, deleteQuestion, getComments, deleteComment, Comment } from '@/lib/supabase-api';
+import { getAllQuestions, deleteQuestion, getComments, deleteComment, Comment } from '@/lib/d1-api';
 import { Question } from '@/lib/mock-data';
 import { Trash2, RefreshCw, MessageSquare, X } from 'lucide-react';
 import clsx from 'clsx';

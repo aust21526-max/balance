@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ThumbsUp, Send } from 'lucide-react';
-import { getComments, postComment, likeComment, Comment } from '@/lib/supabase-api';
+import { getComments, postComment, likeComment, Comment } from '@/lib/d1-api';
 import clsx from 'clsx';
 
 interface CommentModalProps {
