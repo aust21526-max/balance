@@ -1,5 +1,11 @@
 import { supabase } from './supabase';
-import { Question } from './mock-data'; // Keeping the interface, ignoring the mock array
+import { Question, MOCK_QUESTION } from './mock-data';
+
+// Helper to check if we are in build mode (invalid keys)
+const isBuildMode = () => {
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    return !key || key.includes('placeholder');
+};
 
 // Map Supabase result to Question interface
 const mapQuestion = (data: any): Question => ({
@@ -12,6 +18,12 @@ const mapQuestion = (data: any): Question => ({
 });
 
 export const getOneRandomQuestion = async (excludedIds: string[] = []): Promise<Question | null> => {
+    // Safety check for build time
+    if (isBuildMode()) {
+        console.log('Build mode detected: Returning mock question');
+        return MOCK_QUESTION;
+    }
+
     let query = supabase
         .from('questions')
         .select('*')
@@ -96,6 +108,8 @@ export const toggleApproval = async (id: string, currentStatus: boolean) => {
 };
 
 export const getLeaderboard = async () => {
+    if (isBuildMode()) return [];
+
     // Fetch all approved questions
     const { data, error } = await supabase
         .from('questions')
@@ -135,6 +149,8 @@ export interface Comment {
 }
 
 export const getComments = async (questionId: string): Promise<Comment[]> => {
+    if (isBuildMode()) return [];
+
     const { data, error } = await supabase
         .from('comments')
         .select('*')
