@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { getAllQuestions, deleteQuestion, getComments, deleteComment, Comment } from '@/lib/supabase-api';
 import { Question } from '@/lib/mock-data';
