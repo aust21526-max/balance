@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const runtime = 'edge';
+
 // Mock AI implementation for now (free/safe default)
 // In production, this would call Gemini Flash API
 export async function POST(req: NextRequest) {
