@@ -8,6 +8,8 @@ import clsx from 'clsx';
 import ShareButtons from './ShareButtons';
 import SubmitQuestionModal from './SubmitQuestionModal';
 import PeekStats from './PeekStats';
+import CommentModal from './CommentModal';
+import { incrementVote } from '@/lib/supabase-api';
 
 interface VoteInterfaceProps {
     initialQuestion: Question;
@@ -17,22 +19,38 @@ export default function VoteInterface({ initialQuestion }: VoteInterfaceProps) {
     const [question, setQuestion] = useState(initialQuestion);
     const [hasVoted, setHasVoted] = useState(false);
     const [selectedOption, setSelectedOption] = useState<'A' | 'B' | null>(null);
+
+    // UI State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [showComments, setShowComments] = useState(false);
 
+    // Optimistic UI updates
+    const [localVoteA, setLocalVoteA] = useState(0);
+    const [localVoteB, setLocalVoteB] = useState(0);
+
     // Initial load check
-    console.log("VoteInterface Loaded: v2 (Leaderboard + PeekStats + ShareMenu)");
+    // console.log("VoteInterface Loaded: v3 (Real Data Integration)");
 
-    const totalVotes = question.vote_count_a + question.vote_count_b + (hasVoted ? 1 : 0);
-    const percentA = hasVoted
-        ? Math.round(((question.vote_count_a + (selectedOption === 'A' ? 1 : 0)) / totalVotes) * 100)
-        : 50;
-    const percentB = hasVoted ? 100 - percentA : 50;
+    const totalVotes = question.vote_count_a + question.vote_count_b + localVoteA + localVoteB;
 
-    const handleVote = (option: 'A' | 'B') => {
+    const currentVoteA = question.vote_count_a + localVoteA;
+    const currentVoteB = question.vote_count_b + localVoteB;
+
+    const percentA = totalVotes === 0 ? 50 : Math.round((currentVoteA / totalVotes) * 100);
+    const percentB = totalVotes === 0 ? 50 : 100 - percentA;
+
+    const handleVote = async (option: 'A' | 'B') => {
         if (hasVoted) return;
+
         setSelectedOption(option);
         setHasVoted(true);
+
+        // Optimistic Update
+        if (option === 'A') setLocalVoteA(prev => prev + 1);
+        else setLocalVoteB(prev => prev + 1);
+
+        // Real API Call
+        await incrementVote(question.id, option);
     };
 
     const handleNext = () => {
@@ -42,16 +60,15 @@ export default function VoteInterface({ initialQuestion }: VoteInterfaceProps) {
     return (
         <div className="flex flex-col h-[100dvh] w-full overflow-hidden relative bg-black">
 
-            {/* Top Bar */}
             <div className="absolute top-0 left-0 w-full z-50 p-4 flex justify-between items-start pointer-events-none mix-blend-difference text-white">
-                <div className="flex flex-col gap-1 pointer-events-auto">
+                <div className="flex flex-col gap-2 pointer-events-auto">
                     <h1 className="font-bold text-xl tracking-tighter">BALANCE</h1>
                     <div className="flex items-center gap-2">
-                        <span className="text-xs opacity-70">🔥 {totalVotes.toLocaleString()}</span>
-                        <a href="/leaderboard" className="opacity-80 hover:opacity-100 transition-opacity">
-                            <Trophy size={16} className="text-[#FEE500]" />
-                        </a>
+                        <span className="text-xs opacity-70 font-mono">Total Votes: {totalVotes.toLocaleString()}</span>
                     </div>
+                    <a href="/leaderboard" className="mt-1 flex items-center gap-2 bg-[#FEE500] text-black px-3 py-1.5 rounded-full font-bold text-sm hover:scale-105 transition-transform shadow-lg">
+                        <Trophy size={16} className="fill-black" /> 명예의 전당
+                    </a>
                 </div>
             </div>
 
@@ -171,32 +188,29 @@ export default function VoteInterface({ initialQuestion }: VoteInterfaceProps) {
                         </button>
 
                         {/* Comment Section Placeholder */}
-                        {!showComments ? (
-                            <button
-                                onClick={() => setShowComments(true)}
-                                className="text-white/50 text-sm flex items-center justify-center gap-1 hover:text-white transition-colors py-2"
-                            >
-                                <MessageSquare size={16} /> 댓글 토론 (99+)
-                            </button>
-                        ) : (
-                            <div className="w-full max-w-md mx-auto mt-4 px-2">
-                                <h3 className="text-white font-bold mb-2">🔥 베스트 댓글</h3>
-                                <div className="bg-white/5 rounded-lg p-3 mb-2 border border-white/10">
-                                    <div className="flex justify-between text-xs text-white/50 mb-1">
-                                        <span className="text-balance-red font-bold">A 선택</span>
-                                        <span>👍 1,240</span>
-                                    </div>
-                                    <p className="text-sm text-white/90">솔직히 샤워 안 하면 냄새나서 사회생활 못 함 ㅋㅋ 양치는 껌 씹으면 됨</p>
+                        <button
+                            onClick={() => setShowComments(true)}
+                            className="w-full max-w-md mx-auto mt-4 bg-white/5 border border-white/10 hover:bg-white/10 transition-colors rounded-xl p-4 flex items-center justify-between group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="bg-white/10 p-2 rounded-full">
+                                    <MessageSquare size={20} className="text-white" />
                                 </div>
-                                <div className="bg-white/5 rounded-lg p-3 mb-2 border border-white/10">
-                                    <div className="flex justify-between text-xs text-white/50 mb-1">
-                                        <span className="text-balance-blue font-bold">B 선택</span>
-                                        <span>👍 856</span>
-                                    </div>
-                                    <p className="text-sm text-white/90">이빨 썩어서 틀니 끼면 되지만 피부 썩으면 답도 없음</p>
+                                <div className="text-left">
+                                    <div className="text-white font-bold text-sm">댓글 토론장 입장</div>
+                                    <div className="text-white/40 text-xs">익명으로 자유롭게 의견 나누기</div>
                                 </div>
                             </div>
-                        )}
+                            <ArrowRight size={16} className="text-white/30 group-hover:translate-x-1 transition-transform" />
+                        </button>
+
+                        <CommentModal
+                            isOpen={showComments}
+                            onClose={() => setShowComments(false)}
+                            questionId={question.id}
+                            userVoteSide={selectedOption}
+                        />
+
                     </motion.div>
                 )}
             </AnimatePresence>

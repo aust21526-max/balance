@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, AlertCircle } from 'lucide-react';
+import { submitQuestion } from '@/lib/supabase-api';
 
 interface SubmitQuestionModalProps {
     isOpen: boolean;
@@ -43,26 +44,25 @@ export default function SubmitQuestionModal({ isOpen, onClose }: SubmitQuestionM
             // Here we proceed for demo purposes if API fails.
         }
 
-        // Simulate API call and duplicate check
-        setTimeout(() => {
-            // Mock duplicate check logic
-            const isDuplicate = Math.random() < 0.1; // 10% chance of duplicate for demo
+        // Real Supabase Submission
+        try {
+            await submitQuestion(`${optionA} vs ${optionB}`, optionA, optionB);
 
-            if (isDuplicate) {
-                setSubmitStatus('error');
-                alert("이미 비슷한 밸런스 게임이 존재합니다! (중복 방지 테스트)");
-                setIsSubmitting(false);
-            } else {
-                setSubmitStatus('success');
-                setTimeout(() => {
-                    onClose();
-                    setOptionA('');
-                    setOptionB('');
-                    setSubmitStatus('idle');
-                    alert("질문이 등록되었습니다! (AI 승인 완료)");
-                }, 1000);
-            }
-        }, 1000);
+            setSubmitStatus('success');
+            setTimeout(() => {
+                onClose();
+                setOptionA('');
+                setOptionB('');
+                setSubmitStatus('idle');
+                alert("질문이 등록되었습니다! (즉시 반영됨)");
+            }, 1000);
+
+        } catch (error) {
+            console.error("Submission failed", error);
+            setSubmitStatus('error');
+            alert("질문 등록에 실패했습니다. 다시 시도해주세요.");
+            setIsSubmitting(false);
+        }
     };
 
     return (
