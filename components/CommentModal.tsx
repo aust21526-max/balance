@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ThumbsUp, Send } from 'lucide-react';
-import { getComments, postComment, likeComment, Comment } from '@/lib/d1-api';
+import { getCommentsAction, postCommentAction, likeCommentAction } from '@/app/actions';
+import { Comment } from '@/lib/d1-api';
 import clsx from 'clsx';
 
 interface CommentModalProps {
@@ -27,7 +28,7 @@ export default function CommentModal({ isOpen, onClose, questionId, userVoteSide
 
     const fetchComments = async () => {
         setLoading(true);
-        const data = await getComments(questionId);
+        const data = await getCommentsAction(questionId);
         setComments(data);
         setLoading(false);
     };
@@ -38,7 +39,7 @@ export default function CommentModal({ isOpen, onClose, questionId, userVoteSide
 
         setIsSubmitting(true);
         try {
-            await postComment(questionId, newComment, userVoteSide);
+            await postCommentAction(questionId, newComment, userVoteSide);
             setNewComment('');
             fetchComments(); // Refresh list
         } catch (error) {
@@ -55,7 +56,7 @@ export default function CommentModal({ isOpen, onClose, questionId, userVoteSide
         ));
 
         try {
-            await likeComment(commentId);
+            await likeCommentAction(commentId);
         } catch (error) {
             console.error(error);
         }

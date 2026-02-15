@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, AlertCircle } from 'lucide-react';
-import { moderateContent } from '@/app/actions';
-import { submitQuestion } from '@/lib/d1-api';
+import { moderateContent, submitQuestionAction } from '@/app/actions';
 
 interface SubmitQuestionModalProps {
     isOpen: boolean;
@@ -37,9 +36,11 @@ export default function SubmitQuestionModal({ isOpen, onClose }: SubmitQuestionM
             console.error("Moderation check failed", e);
         }
 
-        // Real Supabase Submission
+        // Real D1 Submission via Server Action
         try {
-            await submitQuestion(`${optionA} vs ${optionB}`, optionA, optionB);
+            const res = await submitQuestionAction(`${optionA} vs ${optionB}`, optionA, optionB);
+
+            if (!res.success) throw new Error("Server Action Failed");
 
             setSubmitStatus('success');
             setTimeout(() => {

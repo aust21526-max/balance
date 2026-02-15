@@ -9,7 +9,7 @@ import ShareButtons from './ShareButtons';
 import SubmitQuestionModal from './SubmitQuestionModal';
 import PeekStats from './PeekStats';
 import CommentModal from './CommentModal';
-import { incrementVote } from '@/lib/d1-api';
+import { incrementVoteAction, getNextQuestionAction } from '@/app/actions';
 
 interface VoteInterfaceProps {
     initialQuestion: Question;
@@ -64,7 +64,7 @@ export default function VoteInterface({ initialQuestion }: VoteInterfaceProps) {
         else setLocalVoteB(prev => prev + 1);
 
         // Real API Call
-        await incrementVote(question.id, option);
+        await incrementVoteAction(question.id, option);
     };
 
     const handleNext = async () => {
@@ -82,8 +82,7 @@ export default function VoteInterface({ initialQuestion }: VoteInterfaceProps) {
         // But first, show loading state? For now, we rely on React state update speed.
 
         try {
-            const { getOneRandomQuestion } = await import('@/lib/supabase-api');
-            const newQuestion = await getOneRandomQuestion(votedIds);
+            const newQuestion = await getNextQuestionAction(votedIds);
 
             if (newQuestion) {
                 setQuestion(newQuestion);
