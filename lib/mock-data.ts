@@ -34,6 +34,8 @@ export const MOCK_QUESTIONS: Question[] = [
     }
 ];
 
+export const MOCK_QUESTION = MOCK_QUESTIONS[0];
+
 export function getRandomQuestion(): Question {
     return MOCK_QUESTIONS[Math.floor(Math.random() * MOCK_QUESTIONS.length)];
 }

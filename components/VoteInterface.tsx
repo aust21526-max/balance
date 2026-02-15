@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Question } from '@/lib/mock-data';
-import { MessageSquare, ArrowRight, Plus, Trophy } from 'lucide-react';
+import { MessageSquare, ArrowRight, Plus, Trophy, Home, Lock } from 'lucide-react';
 import clsx from 'clsx';
 import ShareButtons from './ShareButtons';
 import SubmitQuestionModal from './SubmitQuestionModal';
@@ -31,6 +31,16 @@ export default function VoteInterface({ initialQuestion }: VoteInterfaceProps) {
     // Initial load check
     // console.log("VoteInterface Loaded: v3 (Real Data Integration)");
 
+    // Voted history state
+    const [votedIds, setVotedIds] = useState<string[]>([]);
+
+    useEffect(() => {
+        const stored = localStorage.getItem('voted_questions');
+        if (stored) {
+            setVotedIds(JSON.parse(stored));
+        }
+    }, []);
+
     const totalVotes = question.vote_count_a + question.vote_count_b + localVoteA + localVoteB;
 
     const currentVoteA = question.vote_count_a + localVoteA;
@@ -45,6 +55,10 @@ export default function VoteInterface({ initialQuestion }: VoteInterfaceProps) {
         setSelectedOption(option);
         setHasVoted(true);
 
+        const newVotedIds = [...votedIds, question.id];
+        setVotedIds(newVotedIds);
+        localStorage.setItem('voted_questions', JSON.stringify(newVotedIds));
+
         // Optimistic Update
         if (option === 'A') setLocalVoteA(prev => prev + 1);
         else setLocalVoteB(prev => prev + 1);
@@ -53,8 +67,34 @@ export default function VoteInterface({ initialQuestion }: VoteInterfaceProps) {
         await incrementVote(question.id, option);
     };
 
-    const handleNext = () => {
-        window.location.reload();
+    const handleNext = async () => {
+        // Reset states for animation
+        setHasVoted(false);
+        setSelectedOption(null);
+        setLocalVoteA(0);
+        setLocalVoteB(0);
+        setShowComments(false);
+
+        // Fetch new question excluding voted ones
+        // Import getOneRandomQuestion dynamically to avoid server/client issues if any, 
+        // though strictly 'lib/supabase-api' is safe. 
+        // We'll use the imported one.
+        // But first, show loading state? For now, we rely on React state update speed.
+
+        try {
+            const { getOneRandomQuestion } = await import('@/lib/supabase-api');
+            const newQuestion = await getOneRandomQuestion(votedIds);
+
+            if (newQuestion) {
+                setQuestion(newQuestion);
+            } else {
+                alert("모든 질문을 완료하셨습니다! 대단해요 🎉 (새 질문이 등록될 때까지 기다려주세요)");
+                // Optionally reset list or redirect
+            }
+        } catch (e) {
+            console.error("Failed to fetch next", e);
+            alert("질문을 불러오는데 실패했습니다.");
+        }
     };
 
     return (
@@ -62,13 +102,25 @@ export default function VoteInterface({ initialQuestion }: VoteInterfaceProps) {
 
             <div className="absolute top-0 left-0 w-full z-50 p-4 flex justify-between items-start pointer-events-none mix-blend-difference text-white">
                 <div className="flex flex-col gap-2 pointer-events-auto">
-                    <h1 className="font-bold text-xl tracking-tighter">BALANCE</h1>
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs opacity-70 font-mono">Total Votes: {totalVotes.toLocaleString()}</span>
+                    <div className="flex items-center gap-3">
+                        <a href="/" className="bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors">
+                            <Home size={20} />
+                        </a>
+                        <h1 className="font-bold text-xl tracking-tighter">BALANCE</h1>
                     </div>
-                    <a href="/leaderboard" className="mt-1 flex items-center gap-2 bg-[#FEE500] text-black px-3 py-1.5 rounded-full font-bold text-sm hover:scale-105 transition-transform shadow-lg">
-                        <Trophy size={16} className="fill-black" /> 명예의 전당
-                    </a>
+
+                    <div className="flex items-center gap-2 pl-1">
+                        <span className="text-xs opacity-70 font-mono">Votes: {totalVotes.toLocaleString()}</span>
+                    </div>
+
+                    <div className="flex gap-2">
+                        <a href="/leaderboard" className="mt-1 flex items-center gap-2 bg-[#FEE500] text-black px-3 py-1.5 rounded-full font-bold text-sm hover:scale-105 transition-transform shadow-lg">
+                            <Trophy size={14} className="fill-black" /> 명예의 전당
+                        </a>
+                        <a href="/admin" className="mt-1 flex items-center justify-center bg-white/10 text-white w-8 h-8 rounded-full hover:bg-white/20 transition-colors" title="관리자">
+                            <Lock size={12} />
+                        </a>
+                    </div>
                 </div>
             </div>
 
@@ -204,16 +256,16 @@ export default function VoteInterface({ initialQuestion }: VoteInterfaceProps) {
                             <ArrowRight size={16} className="text-white/30 group-hover:translate-x-1 transition-transform" />
                         </button>
 
-                        <CommentModal
-                            isOpen={showComments}
-                            onClose={() => setShowComments(false)}
-                            questionId={question.id}
-                            userVoteSide={selectedOption}
-                        />
-
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            <CommentModal
+                isOpen={showComments}
+                onClose={() => setShowComments(false)}
+                questionId={question.id}
+                userVoteSide={selectedOption}
+            />
 
         </div>
     );

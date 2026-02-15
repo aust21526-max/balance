@@ -1,11 +1,10 @@
-'use client';
-
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Trophy, ArrowLeft } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Trophy, ArrowLeft, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { getLeaderboard } from '@/lib/supabase-api';
 import { Question } from '@/lib/mock-data';
+import CommentModal from '@/components/CommentModal';
 
 interface LeaderboardItem extends Question {
     balance_score: number;
@@ -14,6 +13,7 @@ interface LeaderboardItem extends Question {
 export default function LeaderboardPage() {
     const [items, setItems] = useState<LeaderboardItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
 
     useEffect(() => {
         async function fetchData() {
@@ -62,14 +62,20 @@ export default function LeaderboardPage() {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: index * 0.05 }}
-                                    className="bg-[#1E1E1E] border border-white/10 rounded-xl p-4 relative overflow-hidden"
+                                    whileHover={{ scale: 1.02 }}
+                                    className="bg-[#1E1E1E] border border-white/10 rounded-xl p-4 relative overflow-hidden cursor-pointer group"
+                                    onClick={() => setSelectedQuestionId(item.id)}
                                 >
                                     {/* Rank Badge */}
                                     <div className="absolute top-0 left-0 bg-[#FEE500] text-black font-bold px-3 py-1 rounded-br-lg text-sm z-10">
                                         {index + 1}위
                                     </div>
 
-                                    <div className="mt-6 flex flex-col gap-2">
+                                    <div className="absolute top-3 right-3 text-white/20 group-hover:text-white/80 transition-colors">
+                                        <MessageSquare size={16} />
+                                    </div>
+
+                                    <div className="mt-8 flex flex-col gap-3">
                                         <div className="flex justify-between items-center text-sm font-bold">
                                             <span className="text-balance-red w-1/2 truncate pr-2">{item.option_a}</span>
                                             <span className="text-balance-blue w-1/2 truncate pl-2 text-right">{item.option_b}</span>
@@ -93,6 +99,16 @@ export default function LeaderboardPage() {
                     </div>
                 )}
             </div>
+
+            {/* Comment Modal for Leaderboard */}
+            {selectedQuestionId && (
+                <CommentModal
+                    isOpen={!!selectedQuestionId}
+                    onClose={() => setSelectedQuestionId(null)}
+                    questionId={selectedQuestionId}
+                    userVoteSide={null} // Read-only mode for voting
+                />
+            )}
         </div>
     );
 }

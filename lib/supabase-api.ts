@@ -11,12 +11,19 @@ const mapQuestion = (data: any): Question => ({
     vote_count_b: data.vote_count_b || 0,
 });
 
-export const getOneRandomQuestion = async (): Promise<Question | null> => {
-    const { data, error } = await supabase
+export const getOneRandomQuestion = async (excludedIds: string[] = []): Promise<Question | null> => {
+    let query = supabase
         .from('questions')
         .select('*')
-        .eq('is_approved', true)
-        .limit(50);
+        .eq('is_approved', true);
+
+    // If we have excluded IDs, filter them out
+    if (excludedIds.length > 0) {
+        query = query.not('id', 'in', `(${excludedIds.join(',')})`);
+    }
+
+    // Fetch a batch (limit 50 to pick random from)
+    const { data, error } = await query.limit(50);
 
     if (error) {
         console.error('Error fetching questions:', error);
