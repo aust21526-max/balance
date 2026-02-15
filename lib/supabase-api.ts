@@ -174,3 +174,12 @@ export const likeComment = async (commentId: string) => {
 
     if (error) throw error;
 };
+
+export const deleteComment = async (commentId: string) => {
+    const { error } = await supabase
+        .from('comments')
+        .delete()
+        .eq('id', commentId);
+
+    if (error) throw error;
+};
