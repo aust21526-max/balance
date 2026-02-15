@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
 
 // Mock AI implementation for now (free/safe default)
 // In production, this would call Gemini Flash API
