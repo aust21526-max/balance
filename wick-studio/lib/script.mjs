@@ -13,7 +13,7 @@ export const MOODS = ['excited', 'calm', 'tense', 'gloomy', 'apology'];
 export const BADGES = ['QUALIFIED', 'CANDIDATE'];
 
 // Words in ON-SCREEN lists that are never tickers.
-const NOT_TICKERS = new Set([...BADGES, 'EARNINGS', 'WEEK', 'LIVE', 'CONFIRMED', 'CTA', 'TB', 'MON', 'SPY', 'ETF', 'AI']);
+const NOT_TICKERS = new Set([...BADGES, 'EARNINGS', 'WEEK', 'LIVE', 'CONFIRMED', 'CTA', 'TB', 'MON', 'SPY', 'ETF', 'AI', 'ABOUT']);
 
 export function parseScript(text) {
   const errors = [];
@@ -70,10 +70,12 @@ export function parseOnScreen(raw) {
   const tickers = [];
   const badges = [];
   let chart = false;
+  let about = false;
   const other = [];
   for (const item of items) {
     const up = item.toUpperCase();
     if (/chart|차트/i.test(item)) { chart = true; continue; }
+    if (/^about$|기업\s*소개/i.test(item)) { about = true; continue; }
     const badge = BADGES.find((b) => up.includes(b));
     if (badge) { badges.push(badge); continue; }
     if (/EARNINGS\s*WEEK/i.test(item)) continue; // added automatically from the packet
@@ -81,5 +83,5 @@ export function parseOnScreen(raw) {
     if (t && !NOT_TICKERS.has(t[1])) { tickers.push(t[1]); continue; }
     other.push(item);
   }
-  return { tickers, badges, chart, other, raw: raw.trim() };
+  return { tickers, badges, chart, about, other, raw: raw.trim() };
 }

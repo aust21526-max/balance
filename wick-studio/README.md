@@ -53,5 +53,6 @@ cd wick-studio
 | count | 통과 수 숫자와 "qualified"가 들어간 대사 | 숫자 카운트업, QUALIFIED 도장, 불꽃 아이콘 |
 | chart | ON-SCREEN에 티커가 있는 대사 | 차트가 밀려 들어오고 티커 슬램, 배지 도장, 화면 흔들림 |
 | earnings | 실적 주간 종목 + "earnings" 대사 (차트 없음) | 주황 사선 배경, EARNINGS WEEK 도장, 발표일 |
+| about | ON-SCREEN에 `티커, ABOUT` | 회사명 + WHAT THEY DO + 패킷의 `company_blurb`를 음성에 맞춰 한 단어씩 표시 (숫자 금지, `reports/guide-company-blurb.md`) |
 | line | 그 밖의 대사 | 화면 가운데 큰 단어 자막 |
 | end | `[end]` | FULL LIST FOR MEMBERS 슬램, 캐릭터 신남 |

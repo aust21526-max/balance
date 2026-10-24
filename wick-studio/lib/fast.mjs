@@ -3,7 +3,7 @@
 import { drawWick } from '../characters/rig.mjs';
 import { clamp, easeOutBack, easeOutCubic, lerp, rng, shake, spring } from './motion.mjs';
 import { COLORS, dataUri, pill } from './scene.mjs';
-import { esc } from './text.mjs';
+import { esc, wrap } from './text.mjs';
 
 const HL = '#ffd23f'; // active-word highlight
 const ACCENT = { excited: '#22c47a', calm: '#4c8dff', tense: '#ffb020', gloomy: '#ef5350', apology: '#ef5350' };
@@ -188,9 +188,44 @@ function endScene(L, seg, lt, wick) {
   return s;
 }
 
+// "What they do": company name, a WHAT THEY DO tag and the packet's one-line blurb,
+// revealed word by word in step with the voice.
+function aboutScene(L, seg, lt, wick, t) {
+  const { W } = L;
+  const sig = seg.signal;
+  const x0 = L.land ? 140 : 70;
+  const top = L.land ? 250 : 380;
+  const maxW = L.land ? W - 760 : W - 140;
+  let s = '';
+  const tag = pill(0, 0, 'WHAT THEY DO', { bg: HL, size: 30 });
+  const tk = easeOutBack(lt / 0.3);
+  s += `<g transform="translate(${x0 + (1 - tk) * -200},${top})">${tag.svg}</g>`;
+  s += `<text x="${x0}" y="${top + 150}" font-family="Inter" font-size="${L.land ? 96 : 88}" font-weight="900" fill="${COLORS.text}" fill-opacity="${clamp((lt - 0.1) / 0.15).toFixed(2)}">${esc(sig.company ?? sig.symbol)}</text>`;
+  s += `<text x="${x0}" y="${top + 210}" font-family="Inter" font-size="40" font-weight="800" fill="${COLORS.muted}" fill-opacity="${clamp((lt - 0.2) / 0.15).toFixed(2)}">$${esc(sig.symbol)}</text>`;
+  // Accent bar grows down the left edge.
+  const barH = 360 * easeOutCubic((lt - 0.2) / 0.4);
+  s += `<rect x="${x0 - 36}" y="${top + 250}" width="10" height="${barH.toFixed(1)}" rx="5" fill="${HL}"/>`;
+  const size = L.land ? 64 : 62;
+  const lines = wrap(sig.company_blurb, size, maxW, 0.55);
+  const words = lines.join(' ').split(' ');
+  const per = Math.max(0.12, (seg.dur - 0.6) / Math.max(1, words.length)); // spread the reveal over the line
+  let wi = 0;
+  lines.forEach((line, li) => {
+    const spans = line.split(' ').map((w) => {
+      const k = clamp((lt - 0.35 - wi++ * per) / 0.18);
+      return `<tspan fill="#fff" fill-opacity="${(0.15 + 0.85 * k).toFixed(2)}">${esc(w)} </tspan>`;
+    }).join('');
+    s += `<text x="${x0}" y="${top + 320 + li * size * 1.25}" font-family="Inter" font-size="${size}" font-weight="800">${spans}</text>`;
+  });
+  const pop = spring(lt - 0.15);
+  s += wickAt(L.side.x, L.side.y + (1 - pop) * 300, L.side.s, wick);
+  return s;
+}
+
 export function sceneKind(seg, i, count) {
   if (i === 0) return 'hero';
   if (seg.isEnd) return 'end';
+  if (seg.signal && seg.about && seg.signal.company_blurb) return 'about';
   if (seg.signal && seg.signal.earnings_caution && /earnings/i.test(seg.text) && !seg.chart) return 'earnings';
   if (seg.signal) return 'chart';
   if (count > 0 && new RegExp(`\\b${count}\\b`).test(seg.text) && /qualif/i.test(seg.text)) return 'count';
@@ -209,11 +244,12 @@ export function fastFrame(L, st) {
     case 'hero': body = heroScene(L, seg, lt, st.wick, st.chunk, t); break;
     case 'chart': body = chartScene(L, seg, lt, st.wick); break;
     case 'earnings': body = earningsScene(L, seg, lt, st.wick); break;
+    case 'about': body = aboutScene(L, seg, lt, st.wick, t); break;
     case 'count': body = countScene(L, seg, lt, st.wick, st.count); break;
     case 'end': body = endScene(L, seg, lt, st.wick); break;
     default: body = lineScene(L, seg, lt, st.wick, st.chunk, t);
   }
-  const bottomCap = seg.kind === 'hero' || seg.kind === 'line' ? '' : caption(st.chunk, { x: L.W / 2, ...L.cap }, t);
+  const bottomCap = seg.kind === 'hero' || seg.kind === 'line' || seg.kind === 'about' ? '' : caption(st.chunk, { x: L.W / 2, ...L.cap }, t);
   const flash = clamp(1 - lt / 0.12) * 0.35;
   const cx = L.W / 2, cy = L.H / 2;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${L.W}" height="${L.H}" viewBox="0 0 ${L.W} ${L.H}">

@@ -6,6 +6,22 @@ import { packetNumbers, publicSymbols, signalFor, weekDirection } from './packet
 // Scores and rankings are never shown; advice/guarantee language is never used.
 const BANNED = /\b(scores?|scored|ranked|ranking|rank|top pick|number one|highest|best pick|guarantee[sd]?|sure thing|must buy|buy now)\b|#\s?1\b/i;
 
+// ABOUT segments show the packet's company_blurb: one plain-language line, no figures.
+function checkAbout(seg, where, packet, errors, warnings) {
+  const sym = seg.onScreen.tickers[0];
+  if (!sym) { errors.push(`${where}: ABOUT needs a ticker`); return; }
+  const blurb = signalFor(packet, sym)?.company_blurb;
+  if (!blurb) { errors.push(`${where}: ${sym} has no company_blurb in the packet — ABOUT cannot be shown`); return; }
+  if (/\d/.test(blurb)) errors.push(`${where}: ${sym} company_blurb contains a number — blurbs must not quote figures`);
+  if (BANNED.test(blurb)) errors.push(`${where}: ${sym} company_blurb uses score/ranking/advice wording`);
+  const words = blurb.split(/\s+/).length;
+  if (words > 16) warnings.push(`${where}: ${sym} company_blurb is ${words} words (keep it under 16)`);
+  const norm = (s) => new Set(s.toLowerCase().match(/[a-z']+/g) ?? []);
+  const b = norm(blurb), said = norm(seg.text);
+  const shared = [...b].filter((w) => said.has(w)).length;
+  if (shared / Math.max(1, b.size) < 0.5) warnings.push(`${where}: spoken line differs from ${sym} company_blurb — Wick should read the blurb`);
+}
+
 export function chartPath(queueDir, symbol) {
   return join(queueDir, 'charts', `${symbol.toUpperCase()}.png`);
 }
@@ -49,6 +65,7 @@ export function validate({ script, packet, queueDir }) {
       }
     }
     if (seg.onScreen.chart && !seg.onScreen.tickers.length) errors.push(`${where}: chart requested without a ticker`);
+    if (seg.onScreen.about) checkAbout(seg, where, packet, errors, warnings);
   }
 
   if (earningsTickers.size && !/earnings/i.test(spoken)) {

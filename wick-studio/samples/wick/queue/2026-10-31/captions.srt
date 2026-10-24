@@ -11,13 +11,17 @@ Weekly close or it didn't happen. And it happened.
 Free sample this week: Demo Corp. It passed the weekly close.
 
 4
-00:00:07,113 --> 00:00:10,733
-Heads up. Earnings on Nov 4. Expect volatility around the report.
+00:00:07,113 --> 00:00:10,333
+Sample company that builds placeholder widgets for render tests.
 
 5
-00:00:10,773 --> 00:00:13,660
-Every call gets graded. Wins and losses, all public.
+00:00:10,373 --> 00:00:13,993
+Heads up. Earnings on Nov 4. Expect volatility around the report.
 
 6
-00:00:13,700 --> 00:00:15,867
+00:00:14,033 --> 00:00:16,920
+Every call gets graded. Wins and losses, all public.
+
+7
+00:00:16,960 --> 00:00:19,127
 Full list for members. See you next Saturday.

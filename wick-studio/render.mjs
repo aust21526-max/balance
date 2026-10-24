@@ -127,6 +127,7 @@ function cuesFor(placed, count) {
         if (p.signal?.earnings_caution) cues.push({ at: s + 0.7, kind: 'stamp' });
         break;
       case 'earnings': cues.push({ at: s + 0.1, kind: 'stamp' }, { at: s + 0.55, kind: 'pop' }); break;
+      case 'about': cues.push({ at: s + 0.1, kind: 'pop' }, { at: s + 0.35, kind: 'pop' }); break;
       case 'count':
         for (let k = 0; k < Math.min(count, 10); k++) cues.push({ at: s + 0.2 + k * 0.12, kind: 'pop' });
         cues.push({ at: s + 0.5, kind: 'stamp' });
@@ -163,7 +164,7 @@ async function renderVideo({ date, wickDir, queueDir, vertical }) {
   const flameSize = flameSizeFor(count);
   placed.forEach((p, i) => {
     Object.assign(p, viewFor(p.seg, packet, queueDir));
-    p.kind = sceneKind({ ...p.seg, signal: p.signal, chart: p.chart }, i, count);
+    p.kind = sceneKind({ ...p.seg, signal: p.signal, chart: p.chart, about: p.seg.onScreen.about }, i, count);
     p.chunks = chunkWords(p.seg.text, p.voiceStart, p.voiceEnd);
   });
 
