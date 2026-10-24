@@ -1,4 +1,4 @@
-// Weekly Wick rig — PLACEHOLDER character (based on draft B) until the final design is chosen.
+// Weekly Wick rig — draft A "Candle Buddy" (chosen 2026-10-25).
 // The renderer only depends on drawWick(state); swap this file to change the character.
 //
 // state = {
@@ -13,33 +13,30 @@
 
 import { PALETTE } from './drafts.mjs';
 
-const TRIFLAME =
-  'M0,-1 C0.1,-0.8 0.2,-0.7 0.16,-0.55 C0.26,-0.65 0.32,-0.72 0.3,-0.84 ' +
-  'C0.44,-0.6 0.42,-0.3 0.34,-0.16 C0.26,-0.02 0.14,0 0,0 ' +
-  'C-0.14,0 -0.26,-0.02 -0.34,-0.16 C-0.42,-0.3 -0.44,-0.6 -0.3,-0.84 ' +
-  'C-0.32,-0.72 -0.26,-0.65 -0.16,-0.55 C-0.2,-0.7 -0.1,-0.8 0,-1 Z';
 const TEARDROP =
   'M0,-1 C0.22,-0.72 0.38,-0.5 0.36,-0.28 C0.34,-0.08 0.18,0 0,0 ' +
   'C-0.18,0 -0.34,-0.08 -0.36,-0.28 C-0.38,-0.5 -0.22,-0.72 0,-1 Z';
 
 const INK = PALETTE.ink;
+const SAD = new Set(['gloomy', 'apology']);
+const FRONT_ARMS = new Set(['tense', 'apology']); // hands held in front of the body
 
 function flame(t, size) {
   const { outer, mid, core } = PALETTE.flame;
   // Two incommensurate sines give a flicker that never visibly loops.
   const sx = 1 + 0.05 * Math.sin(t * 9.1) + 0.03 * Math.sin(t * 15.7);
   const sy = 1 + 0.07 * Math.sin(t * 7.3 + 1) + 0.03 * Math.sin(t * 13.1);
-  const lean = 3 * Math.sin(t * 4.2);
-  const s = 165 * size;
-  return `<g id="flame" transform="translate(300,280) rotate(${lean.toFixed(2)}) scale(${sx.toFixed(3)},${sy.toFixed(3)})">
-    <path d="${TRIFLAME}" fill="${outer}" transform="scale(${s})"/>
-    <path d="${TRIFLAME}" fill="${mid}" transform="translate(0,${-s * 0.04}) scale(${s * 0.68})"/>
+  const lean = 4 * Math.sin(t * 4.2);
+  const s = 150 * size;
+  return `<g id="flame" transform="translate(300,278) rotate(${lean.toFixed(2)}) scale(${sx.toFixed(3)},${sy.toFixed(3)})">
+    <path d="${TEARDROP}" fill="${outer}" transform="scale(${s})"/>
+    <path d="${TEARDROP}" fill="${mid}" transform="translate(0,${-s * 0.04}) scale(${s * 0.68})"/>
     <path d="${TEARDROP}" fill="${core}" transform="translate(0,${-s * 0.05}) scale(${s * 0.34})"/>
   </g>`;
 }
 
 function smoke(t, size) {
-  const top = 270 - 165 * size * 0.9;
+  const top = 268 - 150 * size * 0.9;
   const puffs = [0, 1, 2].map((i) => {
     const phase = (t * 0.6 + i / 3) % 1; // rises and fades in a loop
     const y = top - 10 - phase * 70;
@@ -51,55 +48,70 @@ function smoke(t, size) {
 }
 
 function eyes(mood, blink) {
-  if (mood === 'gloomy' || mood === 'apology') {
+  if (SAD.has(mood)) {
     return `<g id="eyes">
-      <path d="M236,420 Q256,436 276,420" stroke="${INK}" stroke-width="7" fill="none" stroke-linecap="round"/>
-      <path d="M324,420 Q344,436 364,420" stroke="${INK}" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <path d="M236,412 Q258,430 280,412" stroke="${INK}" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <path d="M320,412 Q342,430 364,412" stroke="${INK}" stroke-width="7" fill="none" stroke-linecap="round"/>
     </g>`;
   }
-  const h = mood === 'excited' ? 36 : 30;
-  const open = Math.max(0.08, 1 - blink);
-  const eh = h * open;
-  const y = 419 - eh / 2;
-  const pupil = (cx) => (open > 0.35 ? `<circle cx="${cx}" cy="421" r="${mood === 'excited' ? 12 : 10}" fill="${INK}"/>
-    <circle cx="${cx + 4}" cy="416" r="3.5" fill="#fff"/>` : '');
-  return `<g id="eyes">
-    <rect x="236" y="${y.toFixed(1)}" width="40" height="${eh.toFixed(1)}" rx="${Math.min(12, eh / 2).toFixed(1)}" fill="#fff"/>
-    <rect x="324" y="${y.toFixed(1)}" width="40" height="${eh.toFixed(1)}" rx="${Math.min(12, eh / 2).toFixed(1)}" fill="#fff"/>
-    ${pupil(256)}${pupil(344)}
-  </g>`;
+  const ry = (mood === 'excited' ? 32 : 28) * Math.max(0.08, 1 - blink);
+  const pr = mood === 'tense' ? 8 : mood === 'excited' ? 14 : 12;
+  const one = (x) => `<ellipse cx="${x}" cy="408" rx="${mood === 'excited' ? 27 : 24}" ry="${ry.toFixed(1)}" fill="#fff"/>
+    ${ry > 10 ? `<circle cx="${x}" cy="412" r="${pr}" fill="${INK}"/><circle cx="${x + 5}" cy="406" r="4" fill="#fff"/>` : ''}
+    ${ry > 10 && mood === 'excited' ? `<circle cx="${x - 6}" cy="418" r="2.5" fill="#fff"/>` : ''}`;
+  return `<g id="eyes">${one(258)}${one(342)}</g>`;
 }
 
+// Brows only appear when the face needs them; calm stays clean like the design sheet.
 function brows(mood) {
-  const tilt = { excited: 4, calm: 10, tense: -6, gloomy: -10, apology: -12 }[mood] ?? 10;
-  const lift = mood === 'excited' ? -14 : mood === 'tense' ? -6 : 0;
+  if (mood === 'calm') return '';
+  const [inner, outer] = { excited: [366, 362], tense: [368, 376], gloomy: [366, 376], apology: [364, 378] }[mood];
+  const sw = mood === 'excited' ? 6 : 7;
   return `<g id="brows">
-    <line x1="232" y1="${392 - tilt + lift}" x2="280" y2="${392 + tilt + lift}" stroke="${INK}" stroke-width="9" stroke-linecap="round"/>
-    <line x1="320" y1="${392 + tilt + lift}" x2="368" y2="${392 - tilt + lift}" stroke="${INK}" stroke-width="9" stroke-linecap="round"/>
+    <path d="M238,${outer} Q256,${Math.min(inner, outer) - 6} 276,${inner}" stroke="${INK}" stroke-width="${sw}" fill="none" stroke-linecap="round"/>
+    <path d="M324,${inner} Q344,${Math.min(inner, outer) - 6} 362,${outer}" stroke="${INK}" stroke-width="${sw}" fill="none" stroke-linecap="round"/>
   </g>`;
 }
 
 function mouth(shape, mood) {
-  const sad = mood === 'gloomy' || mood === 'apology';
   switch (shape) {
     case 'small':
-      return `<g id="mouth"><ellipse cx="300" cy="474" rx="16" ry="9" fill="${INK}"/></g>`;
+      return `<g id="mouth"><ellipse cx="300" cy="474" rx="15" ry="9" fill="${INK}"/></g>`;
     case 'wide':
-      return `<g id="mouth"><path d="M272,464 Q300,506 328,464 Z" fill="${INK}"/>
-        <path d="M286,484 Q300,494 314,484" fill="#ff7b8a"/></g>`;
+      return `<g id="mouth"><path d="M276,466 Q300,506 324,466 Z" fill="${INK}"/>
+        <path d="M288,486 Q300,496 312,486" fill="#ff7b8a"/></g>`;
     case 'round':
       return `<g id="mouth"><ellipse cx="300" cy="476" rx="12" ry="15" fill="${INK}"/></g>`;
     default:
-      if (sad) return `<g id="mouth"><path d="M282,480 Q300,466 318,480" stroke="${INK}" stroke-width="6" fill="none" stroke-linecap="round"/></g>`;
-      if (mood === 'excited') return `<g id="mouth"><path d="M278,466 Q300,488 322,466" stroke="${INK}" stroke-width="6" fill="none" stroke-linecap="round"/></g>`;
-      if (mood === 'tense') return `<g id="mouth"><path d="M282,472 L291,468 L300,474 L309,468 L318,472" stroke="${INK}" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>`;
-      return `<g id="mouth"><line x1="282" y1="470" x2="318" y2="470" stroke="${INK}" stroke-width="6" stroke-linecap="round"/></g>`;
+      if (SAD.has(mood)) return `<g id="mouth"><path d="M284,482 Q300,468 316,482" stroke="${INK}" stroke-width="6" fill="none" stroke-linecap="round"/></g>`;
+      if (mood === 'excited') return `<g id="mouth"><path d="M278,468 Q300,500 322,468 Z" fill="${INK}"/></g>`;
+      if (mood === 'tense') return `<g id="mouth"><path d="M282,476 L291,471 L300,477 L309,471 L318,476" stroke="${INK}" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>`;
+      return `<g id="mouth"><path d="M280,470 Q300,488 320,470" stroke="${INK}" stroke-width="6" fill="none" stroke-linecap="round"/></g>`;
   }
 }
 
+function arms(mood, t, c) {
+  const stroke = `stroke="${c.dark}" stroke-width="20" fill="none" stroke-linecap="round"`;
+  if (mood === 'excited') {
+    const wave = 6 * Math.sin(t * 10);
+    return `<g id="arms"><path d="M206,460 Q170,430 ${158 + wave},${392 - wave}" ${stroke}/>
+      <path d="M394,460 Q430,430 ${442 - wave},${392 - wave}" ${stroke}/></g>`;
+  }
+  if (mood === 'tense') {
+    return `<g id="arms"><path d="M206,480 Q186,500 214,522" ${stroke}/><path d="M394,480 Q414,500 386,522" ${stroke}/></g>`;
+  }
+  if (mood === 'apology') {
+    return `<g id="arms"><path d="M206,470 Q200,520 240,552" ${stroke}/><path d="M394,470 Q400,520 360,552" ${stroke}/></g>`;
+  }
+  if (mood === 'gloomy') {
+    return `<g id="arms"><path d="M206,480 Q192,520 190,560" ${stroke}/><path d="M394,480 Q408,520 410,560" ${stroke}/></g>`;
+  }
+  return `<g id="arms"><path d="M206,470 Q170,490 162,530" ${stroke}/><path d="M394,470 Q430,490 438,530" ${stroke}/></g>`;
+}
+
 function sweat(t) {
-  const y = 380 + ((t * 40) % 30);
-  return `<path d="M392,${y} q8,14 0,20 q-8,-6 0,-20 Z" fill="#8fd3ff" opacity="0.9"/>`;
+  const y = 372 + ((t * 40) % 30);
+  return `<path d="M388,${y.toFixed(1)} q9,15 0,21 q-9,-6 0,-21 Z" fill="#8fd3ff" opacity="0.9"/>`;
 }
 
 export function drawWick({ t = 0, mood = 'calm', mouth: m = 'closed', blink = 0, flameSize = 1, up = true } = {}) {
@@ -110,37 +122,24 @@ export function drawWick({ t = 0, mood = 'calm', mouth: m = 'closed', blink = 0,
   if (mood === 'tense') dx = Math.sin(t * 47) * 2.2;
   if (mood === 'calm') dy = Math.sin(t * 1.8) * 3;
   if (mood === 'apology') rot = 14;
-  const size = mood === 'gloomy' ? Math.min(flameSize, 0.5) : mood === 'excited' ? Math.max(flameSize, 1.1) : flameSize;
-  const armR = mood === 'excited' ? 'M404,470 L452,396' : 'M404,470 L440,410';
-  const cardAt = mood === 'excited' ? 'translate(452,390) rotate(-6)' : 'translate(440,404) rotate(-12)';
-  const showCard = mood !== 'gloomy' && mood !== 'apology';
-  return `<g id="wick" transform="translate(${dx.toFixed(2)},${dy.toFixed(2)}) rotate(${rot},300,700)">
-    <line x1="300" y1="650" x2="300" y2="712" stroke="${c.dark}" stroke-width="12" stroke-linecap="round"/>
-    <g id="arms">
-      <path d="M196,480 L160,540" stroke="${c.dark}" stroke-width="20" fill="none" stroke-linecap="round"/>
-      <path d="${showCard ? armR : 'M404,480 L440,540'}" stroke="${c.dark}" stroke-width="20" fill="none" stroke-linecap="round"/>
-      ${showCard ? `<g id="card" transform="${cardAt}">
-        <rect x="-20" y="-58" width="44" height="58" rx="6" fill="#fff" stroke="${INK}" stroke-width="4"/>
-        <path d="M-8,-30 L0,-20 L14,-42" stroke="${PALETTE.up.dark}" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-      </g>` : ''}
-    </g>
+  const size = mood === 'gloomy' || mood === 'apology' ? Math.min(flameSize, 0.5) : mood === 'excited' ? Math.max(flameSize, 1.1) : flameSize;
+  return `<g id="wick" transform="translate(${dx.toFixed(2)},${dy.toFixed(2)}) rotate(${rot},300,712)">
+    <line x1="300" y1="640" x2="300" y2="712" stroke="${c.dark}" stroke-width="12" stroke-linecap="round"/>
+    ${FRONT_ARMS.has(mood) ? '' : arms(mood, t, c)}
     <g id="body">
-      <rect x="196" y="300" width="208" height="355" rx="18" fill="${c.body}"/>
-      <rect x="196" y="300" width="208" height="40" rx="18" fill="${c.dark}" opacity="0.35"/>
-      <rect x="216" y="352" width="22" height="230" rx="10" fill="${c.light}" opacity="0.5"/>
-      ${[0, 1, 2, 3, 4, 5, 6, 7].map((k) => `<rect x="${196 + k * 26}" y="590" width="26" height="34" fill="${k % 2 ? '#fff' : INK}"/>`).join('')}
+      <rect x="200" y="300" width="200" height="345" rx="40" fill="${c.body}"/>
+      <rect x="222" y="322" width="26" height="200" rx="13" fill="${c.light}" opacity="0.6"/>
     </g>
-    <g id="whistle" transform="translate(156,548)">
-      <rect x="-20" y="-8" width="34" height="22" rx="8" fill="#d8dde6" stroke="${INK}" stroke-width="4"/>
-      <circle cx="4" cy="3" r="4" fill="${INK}"/>
-    </g>
-    <line x1="300" y1="302" x2="300" y2="270" stroke="${PALETTE.wick}" stroke-width="8" stroke-linecap="round"/>
-    ${mood === 'gloomy' || mood === 'apology' ? smoke(t, size) : ''}
+    ${FRONT_ARMS.has(mood) ? arms(mood, t, c) : ''}
+    <line id="wick-top" x1="300" y1="302" x2="300" y2="268" stroke="${PALETTE.wick}" stroke-width="8" stroke-linecap="round"/>
+    ${SAD.has(mood) ? smoke(t, size) : ''}
     ${flame(t, size)}
     ${brows(mood)}
     ${eyes(mood, blink)}
+    <ellipse cx="232" cy="460" rx="16" ry="9" fill="#ff8fa3" opacity="${mood === 'excited' ? 0.7 : 0.45}"/>
+    <ellipse cx="368" cy="460" rx="16" ry="9" fill="#ff8fa3" opacity="${mood === 'excited' ? 0.7 : 0.45}"/>
     ${mouth(m, mood)}
-    ${mood === 'tense' ? sweat(t) : ''}
+    ${mood === 'tense' || mood === 'apology' ? sweat(t) : ''}
   </g>`;
 }
 

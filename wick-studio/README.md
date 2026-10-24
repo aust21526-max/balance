@@ -30,8 +30,8 @@ cd wick-studio
 | `lib/validate.mjs` | 렌더 전 자동 점검 |
 | `lib/audio.mjs`, `tts/kokoro_tts.py` | 음성 합성(문장별 캐시), 입 모양용 음량 |
 | `lib/scene.mjs` | 화면 구성(배지, 차트, 말풍선 자막, 고지 문구), 썸네일, 이미지 모드 |
-| `characters/rig.mjs` | 캐릭터 리그 — **임시 캐릭터**. 최종 디자인이 정해지면 이 파일만 교체 |
-| `characters/drafts.mjs` | 첫 코드 시안 3안 (반려됨, 참고용) |
+| `characters/rig.mjs` | 캐릭터 리그 — A안 Candle Buddy (표정 5종, 입 모양 4종, 깜빡임, 불꽃 일렁임). 캐릭터를 바꾸려면 이 파일만 교체 |
+| `characters/drafts.mjs` | 첫 코드 시안 3안 (A안 채택) |
 | `characters/gpt-prompts.md` | ChatGPT 이미지 시안 프롬프트 |
 | `config.json` | fps, 해상도, TTS 엔진·목소리 |
 | `assets/fonts/` | Inter 폰트(OFL) — 어느 PC에서나 같은 결과를 내기 위해 포함 |
