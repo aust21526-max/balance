@@ -1,0 +1,8 @@
+node_modules/
+.venv/
+.cache/
+.env
+out/
+samples/wick/queue/*/render.mp4
+samples/wick/queue/*/image.png
+samples/wick/queue/*/.work/
