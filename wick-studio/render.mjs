@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Weekly Wick renderer.
-//   node render.mjs <YYYY-MM-DD>           -> queue/<date>/render.mp4, thumb.png, captions.srt
-//   node render.mjs <YYYY-MM-DD> --image   -> queue/<date>/image.png (1080x1080 weekday still)
+//   node render.mjs <YYYY-MM-DD>              -> queue/<date>/render.mp4 (1920x1080), thumb.png, captions.srt
+//   node render.mjs <YYYY-MM-DD> --vertical   -> same, 1080x1920
+//   node render.mjs <YYYY-MM-DD> --image      -> queue/<date>/image.png (1080x1080 weekday still)
 // Data folder: $WICK_DIR (the synced Google Drive "wick" folder), default ./samples/wick.
 // On failure the reason is written to queue/<date>/error.md and the exit code is 1.
 import { spawn } from 'node:child_process';
@@ -11,15 +12,20 @@ import { fileURLToPath } from 'node:url';
 import { blinkAt } from './characters/rig.mjs';
 import { frameEnvelope, readWav, synthesize, writeWav } from './lib/audio.mjs';
 import { findPacket, flameSizeFor, loadPacket, qualifiedCount, signalFor, weekDirection } from './lib/packet.mjs';
-import { svgToPng, svgToRgba } from './lib/raster.mjs';
-import { thumbnail, stillImage, videoFrame } from './lib/scene.mjs';
+import { rasterInOrder } from './lib/pool.mjs';
+import { svgToPng } from './lib/raster.mjs';
+import { chunkAt, chunkWords, fastFrame, layout, sceneKind } from './lib/fast.mjs';
+import { stillImage } from './lib/scene.mjs';
+import { mixSoundtrack, SR, to48k } from './lib/sfx.mjs';
 import { parseScript } from './lib/script.mjs';
 import { chartPath, validate } from './lib/validate.mjs';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const CFG = JSON.parse(readFileSync(join(ROOT, 'config.json'), 'utf8'));
 const FPS = CFG.fps;
-const GAP = 0.15; // seconds of breath between lines
+const GAP = 0.06; // breath between lines — keep it tight
+const LEAD_IN = 0.2; // first word lands right after the opening punch
+const END_HOLD = 1.6; // CTA card stays up after the last word
 
 class RenderError extends Error {
   constructor(errors, warnings = []) { super(errors.join('\n')); this.errors = errors; this.warnings = warnings; }
@@ -28,11 +34,11 @@ class RenderError extends Error {
 function args() {
   const [date, ...flags] = process.argv.slice(2);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date ?? '')) {
-    console.error('usage: ./render.sh <YYYY-MM-DD> [--image]');
+    console.error('usage: ./render.sh <YYYY-MM-DD> [--vertical | --image]');
     process.exit(2);
   }
   const wickDir = resolve(process.env.WICK_DIR || join(ROOT, 'samples', 'wick'));
-  return { date, image: flags.includes('--image'), wickDir, queueDir: join(wickDir, 'queue', date) };
+  return { date, image: flags.includes('--image'), vertical: flags.includes('--vertical'), wickDir, queueDir: join(wickDir, 'queue', date) };
 }
 
 function writeError(queueDir, date, err) {
@@ -54,18 +60,24 @@ function viewFor(seg, packet, queueDir) {
   };
 }
 
-// Lays the spoken clips on the clock. A line starts at its scripted time, or right after
-// the previous line if that one ran long; [end] follows the last line.
-function buildTimeline(script, clips) {
-  let cursor = 0;
+// Lays the spoken clips back to back with only a short breath between them (fast cut).
+// Script times give the order; the voice sets the pace. [end] holds for the CTA.
+function buildTimeline(script, clips, envs) {
+  let cursor = LEAD_IN;
   const placed = script.segments.map((seg, i) => {
-    const dur = clips[i].samples.length / clips[i].sampleRate;
-    const start = Math.max(seg.isEnd ? cursor + 0.3 : seg.start, cursor ? cursor + GAP : 0);
-    cursor = start + dur;
-    return { seg, clip: clips[i], start, dur, end: start + dur };
+    const env = envs[i];
+    let a = 0, b = env.length - 1;
+    while (a < b && env[a] < 0.06) a++;
+    while (b > a && env[b] < 0.06) b--;
+    const trimStart = a / FPS, trimEnd = (b + 1) / FPS; // voiced part of the clip
+    const start = cursor - trimStart;
+    cursor = start + trimEnd + GAP;
+    return { seg, clip: clips[i], env, start, voiceStart: start + trimStart, voiceEnd: start + trimEnd };
   });
-  const total = Math.max(script.lengthSec, cursor + 0.6);
-  placed.forEach((p, i) => { p.until = i + 1 < placed.length ? placed[i + 1].start : total; });
+  const total = placed[placed.length - 1].voiceEnd + END_HOLD;
+  placed.forEach((p, i) => { p.until = i + 1 < placed.length ? placed[i + 1].voiceStart - 0.04 : total; });
+  placed[0].sceneStart = 0;
+  placed.forEach((p, i) => { if (i) p.sceneStart = placed[i - 1].until; });
   return { placed, total };
 }
 
@@ -81,28 +93,21 @@ function srtTime(s) {
   return `${p(Math.floor(ms / 3600000))}:${p(Math.floor(ms / 60000) % 60)}:${p(Math.floor(ms / 1000) % 60)},${p(ms % 1000, 3)}`;
 }
 
-function mixAudio(placed, total, sampleRate, out) {
-  const mix = new Float32Array(Math.ceil(total * sampleRate));
-  for (const p of placed) mix.set(p.clip.samples, Math.round(p.start * sampleRate));
-  writeWav(out, mix, sampleRate);
-}
-
-function encode({ frames, total, audio, out }) {
+function encode({ frames, total, audio, out, W, H }) {
   return new Promise((resolveP, reject) => {
-    const { width: W, height: H } = CFG.size;
     const ff = spawn('ffmpeg', [
       '-y', '-loglevel', 'error',
       '-f', 'rawvideo', '-pix_fmt', 'rgba', '-s', `${W}x${H}`, '-r', String(FPS), '-i', '-',
       '-i', audio,
-      '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p', '-threads', '1',
-      '-c:a', 'aac', '-b:a', '160k', '-t', total.toFixed(3),
+      '-c:v', 'libx264', '-preset', 'fast', '-crf', '20', '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac', '-b:a', '192k', '-t', total.toFixed(3),
       '-map_metadata', '-1', '-fflags', '+bitexact', '-flags:v', '+bitexact', '-flags:a', '+bitexact',
       '-movflags', '+faststart', out,
     ], { stdio: ['pipe', 'inherit', 'inherit'] });
     ff.on('error', reject);
     ff.on('close', (code) => (code === 0 ? resolveP() : reject(new Error(`ffmpeg exited with ${code}`))));
     (async () => {
-      for (const f of frames()) {
+      for await (const f of frames) {
         if (!ff.stdin.write(f)) await new Promise((r) => ff.stdin.once('drain', r));
       }
       ff.stdin.end();
@@ -110,7 +115,30 @@ function encode({ frames, total, audio, out }) {
   });
 }
 
-async function renderVideo({ date, wickDir, queueDir }) {
+// Sound-effect cues that line up with the on-screen hits in lib/fast.mjs.
+function cuesFor(placed, count) {
+  const cues = [];
+  placed.forEach((p, i) => {
+    const s = p.sceneStart;
+    if (i) cues.push({ at: s - 0.06, kind: 'whoosh' });
+    switch (p.kind) {
+      case 'chart':
+        cues.push({ at: s + 0.12, kind: 'pop' }, { at: s + 0.45, kind: 'stamp' });
+        if (p.signal?.earnings_caution) cues.push({ at: s + 0.7, kind: 'stamp' });
+        break;
+      case 'earnings': cues.push({ at: s + 0.1, kind: 'stamp' }, { at: s + 0.55, kind: 'pop' }); break;
+      case 'count':
+        for (let k = 0; k < Math.min(count, 10); k++) cues.push({ at: s + 0.2 + k * 0.12, kind: 'pop' });
+        cues.push({ at: s + 0.5, kind: 'stamp' });
+        break;
+      case 'end': cues.push({ at: s + 0.05, kind: 'stamp' }, { at: s + 0.25, kind: 'stamp' }); break;
+      default: break;
+    }
+  });
+  return cues;
+}
+
+async function renderVideo({ date, wickDir, queueDir, vertical }) {
   const scriptPath = join(queueDir, 'script.md');
   if (!existsSync(scriptPath)) throw new RenderError([`script.md not found at ${scriptPath}`]);
   const script = parseScript(readFileSync(scriptPath, 'utf8'));
@@ -120,65 +148,72 @@ async function renderVideo({ date, wickDir, queueDir }) {
   if (errors.length) throw new RenderError(errors, warnings);
   for (const w of warnings) console.warn(`warning: ${w}`);
 
+  const { width: W, height: H } = vertical ? CFG.sizes.vertical : CFG.sizes.landscape;
+  const L = layout(W, H);
   const work = join(queueDir, '.work');
   console.log(`[1/4] voice (${CFG.tts.engine}:${CFG.tts.voice})`);
   const wavs = synthesize(ROOT, CFG.tts, script.segments.map((s) => s.text), work);
   const clips = wavs.map(readWav);
-  const { placed, total } = buildTimeline(script, clips);
+  const envs = clips.map((c) => frameEnvelope(c, FPS));
+  const { placed, total } = buildTimeline(script, clips, envs);
   if (total > script.lengthSec + 3) warnings.push(`voice runs ${total.toFixed(1)} s, longer than length_sec ${script.lengthSec} — trim the script`);
-
-  const sampleRate = clips[0].sampleRate;
-  const audioPath = join(work, 'voice.wav');
-  mixAudio(placed, total, sampleRate, audioPath);
-  const envs = placed.map((p) => frameEnvelope(p.clip, FPS));
 
   const count = qualifiedCount(packet);
   const { up } = weekDirection(packet);
   const flameSize = flameSizeFor(count);
-  const views = placed.map((p) => viewFor(p.seg, packet, queueDir));
-  const nFrames = Math.ceil(total * FPS);
+  placed.forEach((p, i) => {
+    Object.assign(p, viewFor(p.seg, packet, queueDir));
+    p.kind = sceneKind({ ...p.seg, signal: p.signal, chart: p.chart }, i, count);
+    p.chunks = chunkWords(p.seg.text, p.voiceStart, p.voiceEnd);
+  });
 
-  function stateAt(f) {
-    const t = f / FPS;
-    let i = placed.findIndex((p) => t >= p.start && t < p.until);
-    if (i < 0) i = t < placed[0].start ? 0 : placed.length - 1;
+  console.log('[2/4] soundtrack (voice + beat + sfx)');
+  const audioPath = join(work, 'mix.wav');
+  mkdirSync(work, { recursive: true });
+  writeWav(audioPath, mixSoundtrack({
+    total,
+    voice: placed.map((p) => ({ at: p.start, samples: to48k(p.clip.samples, p.clip.sampleRate) })),
+    cues: cuesFor(placed, count),
+  }), SR);
+
+  function stateAt(t) {
+    let i = placed.findIndex((p) => t >= p.sceneStart && t < p.until);
+    if (i < 0) i = placed.length - 1;
     const p = placed[i];
     const local = Math.floor((t - p.start) * FPS);
-    const speaking = local >= 0 && local < envs[i].length;
-    const level = speaking ? envs[i][local] : 0;
-    const ch = speaking ? p.seg.text[Math.floor((local / envs[i].length) * p.seg.text.length)] : '';
+    const speaking = local >= 0 && local < p.env.length;
+    const level = speaking ? p.env[local] : 0;
+    const ch = speaking ? p.seg.text[Math.floor((local / p.env.length) * p.seg.text.length)] : '';
+    const mood = p.kind === 'end' ? 'excited' : p.seg.mood;
     return {
-      type: script.type, t,
-      progress: Math.min(1, Math.max(0, (t - p.start) / Math.max(0.1, p.until - p.start))),
-      view: views[i],
-      caption: p.seg.text,
-      wick: { mood: p.seg.mood, mouth: mouthFor(level, ch), blink: blinkAt(t), flameSize, up },
-      weekly: { count, show: script.type === 'weekly_confirm' },
+      type: script.type, t, total, count,
+      seg: { kind: p.kind, start: p.sceneStart, dur: p.until - p.sceneStart, signal: p.signal, chart: p.chart, mood, text: p.seg.text },
+      chunk: chunkAt(p.chunks, t),
+      wick: { t, mood, mouth: mouthFor(level, ch), blink: blinkAt(t), flameSize, up },
     };
   }
 
-  console.log(`[2/4] frames: ${nFrames} @ ${FPS} fps (${total.toFixed(1)} s)`);
+  const nFrames = Math.ceil(total * FPS);
+  console.log(`[3/4] frames: ${nFrames} @ ${FPS} fps, ${W}x${H} (${total.toFixed(1)} s)`);
   const mp4 = join(queueDir, 'render.mp4');
   let done = 0;
   await encode({
-    total, audio: audioPath, out: mp4,
-    *frames() {
+    total, audio: audioPath, out: mp4, W, H,
+    frames: rasterInOrder((function* () {
       for (let f = 0; f < nFrames; f++) {
-        yield svgToRgba(videoFrame(stateAt(f)));
+        yield fastFrame(L, stateAt(f / FPS));
         if (++done % (FPS * 5) === 0) console.log(`      ${done}/${nFrames}`);
       }
-    },
+    })()),
   });
 
-  console.log('[3/4] captions.srt');
-  const srt = placed.map((p, i) => `${i + 1}\n${srtTime(p.start)} --> ${srtTime(Math.min(p.until, p.end + 0.4))}\n${p.seg.text}\n`).join('\n');
+  console.log('[4/4] captions.srt, thumb.png');
+  const srt = placed.map((p, i) => `${i + 1}\n${srtTime(p.voiceStart)} --> ${srtTime(Math.min(p.until, p.voiceEnd + 0.3))}\n${p.seg.text}\n`).join('\n');
   writeFileSync(join(queueDir, 'captions.srt'), srt);
-
-  console.log('[4/4] thumb.png');
-  const shown = views.find((v) => v.signal);
-  writeFileSync(join(queueDir, 'thumb.png'), svgToPng(thumbnail({
-    type: script.type, signal: shown?.signal ?? null, wick: { mood: script.mood, flameSize, up },
-  })));
+  // Thumbnail = the settled ticker shot (or the hook) with no caption on it.
+  const hero = placed.find((p) => p.kind === 'chart') ?? placed[0];
+  const thumbState = stateAt(hero.sceneStart + 1.4);
+  writeFileSync(join(queueDir, 'thumb.png'), svgToPng(fastFrame(L, { ...thumbState, chunk: null, wick: { ...thumbState.wick, mouth: 'closed', blink: 0 } })));
 
   rmSync(work, { recursive: true, force: true });
   rmSync(join(queueDir, 'error.md'), { force: true });

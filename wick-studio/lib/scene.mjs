@@ -1,5 +1,5 @@
-// Frame composer for the 1080x1920 video, the thumbnail and the 1080x1080 image mode.
-// Everything is plain SVG so a frame is a pure function of (timeline state, time).
+// Shared drawing helpers (pills, badges, chart panel) and the 1080x1080 weekday still.
+// The video itself is drawn by lib/fast.mjs.
 import { readFileSync } from 'node:fs';
 import { drawWick } from '../characters/rig.mjs';
 import { esc, textBlock, textWidth, wrap } from './text.mjs';
@@ -13,12 +13,12 @@ const DISCLAIMER = 'Automated account · Not financial advice';
 const CATCHPHRASE = "Weekly close or it didn't happen.";
 
 const imageCache = new Map();
-function dataUri(path) {
+export function dataUri(path) {
   if (!imageCache.has(path)) imageCache.set(path, `data:image/png;base64,${readFileSync(path).toString('base64')}`);
   return imageCache.get(path);
 }
 
-function pill(x, y, label, { bg, fg = COLORS.ink, size = 34, dot = false, anchor = 'start' }) {
+export function pill(x, y, label, { bg, fg = COLORS.ink, size = 34, dot = false, anchor = 'start' }) {
   const padX = size * 0.7, h = size * 1.7;
   const w = textWidth(label, size, 0.62) + padX * 2 + (dot ? size * 0.9 : 0);
   const x0 = anchor === 'middle' ? x - w / 2 : x;
@@ -90,50 +90,6 @@ function mainPanel(view, box, progress) {
     }
   }
   return out;
-}
-
-function bubble(text, box, tailX) {
-  const { x, y, w, h } = box;
-  const lines = wrap(text, 50, w - 80);
-  const size = lines.length > 3 ? 42 : 50;
-  const ls = lines.length > 3 ? wrap(text, size, w - 80) : lines;
-  const ty = y + h / 2 - ((ls.length - 1) * size * 1.22) / 2 + size * 0.36;
-  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="36" fill="#fff"/>
-    <path d="M${tailX - 30},${y + h - 2} L${tailX},${y + h + 46} L${tailX + 34},${y + h - 2} Z" fill="#fff"/>
-    ${textBlock(ls, { x: x + w / 2, y: ty, size, lineHeight: 1.22, color: COLORS.ink, weight: 800, anchor: 'middle' })}`;
-}
-
-// state: { type, t, progress, view, caption, wick: {...rig state}, weekly: {count, show} }
-export function videoFrame(state, W = 1080, H = 1920) {
-  const { type, t, progress, view, caption, wick, weekly } = state;
-  let s = `<rect width="${W}" height="${H}" fill="${COLORS.bg}"/>`;
-  s += statusPill(type, W / 2, 70);
-  s += `<text x="${W / 2}" y="${210}" font-family="Inter" font-size="30" font-weight="800" fill="${COLORS.muted}" text-anchor="middle" letter-spacing="8">WEEKLY WICK</text>`;
-  s += mainPanel(view, { x: 60, y: 250, w: 960, h: 760 }, progress);
-  if (caption) s += bubble(caption, { x: 60, y: 1050, w: 960, h: 270 }, 300);
-  s += `<g transform="translate(70,1255) scale(0.76)">${drawWick({ t, ...wick })}</g>`;
-  const side = weekly.show
-    ? [`${weekly.count} QUALIFIED`, 'this week']
-    : ['Weekly close', "or it didn't happen."];
-  s += textBlock([side[0]], { x: 760, y: 1530, size: 54, color: COLORS.text, weight: 900, anchor: 'middle' });
-  s += textBlock([side[1]], { x: 760, y: 1590, size: 36, color: COLORS.muted, weight: 600, anchor: 'middle' });
-  s += `<text x="${W / 2}" y="${H - 70}" font-family="Inter" font-size="30" font-weight="600" fill="${COLORS.muted}" text-anchor="middle">${DISCLAIMER}</text>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${s}</svg>`;
-}
-
-export function thumbnail({ type, signal, wick }, W = 1080, H = 1920) {
-  let s = `<rect width="${W}" height="${H}" fill="${COLORS.bg}"/>`;
-  s += statusPill(type, W / 2, 90, 40);
-  if (signal) {
-    s += `<text x="${W / 2}" y="520" font-family="Inter" font-size="230" font-weight="900" fill="${COLORS.text}" text-anchor="middle">$${esc(signal.symbol)}</text>`;
-    const row = badgeRow(0, 0, signal, 52);
-    s += `<g transform="translate(${W / 2 - row.w / 2},600)">${row.svg}</g>`;
-  } else {
-    s += `<text x="${W / 2}" y="520" font-family="Inter" font-size="130" font-weight="900" fill="${COLORS.text}" text-anchor="middle" letter-spacing="6">WEEKLY WICK</text>`;
-  }
-  s += `<g transform="translate(135,770) scale(1.35)">${drawWick({ t: 0.3, blink: 0, mouth: 'closed', ...wick })}</g>`;
-  s += `<text x="${W / 2}" y="${H - 70}" font-family="Inter" font-size="32" font-weight="600" fill="${COLORS.muted}" text-anchor="middle">${DISCLAIMER}</text>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${s}</svg>`;
 }
 
 // 1080x1080 still for weekday posts (candidate race, Friday teaser).

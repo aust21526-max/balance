@@ -42,7 +42,7 @@ function smoke(t, size) {
     const y = top - 10 - phase * 70;
     const x = 300 + 10 * Math.sin((t + i) * 2);
     const r = 8 + phase * 12;
-    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${PALETTE.smoke}" opacity="${(0.6 * (1 - phase)).toFixed(2)}"/>`;
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${PALETTE.smoke}" fill-opacity="${(0.6 * (1 - phase)).toFixed(2)}"/>`;
   });
   return `<g id="smoke">${puffs.join('')}</g>`;
 }
@@ -111,7 +111,7 @@ function arms(mood, t, c) {
 
 function sweat(t) {
   const y = 372 + ((t * 40) % 30);
-  return `<path d="M388,${y.toFixed(1)} q9,15 0,21 q-9,-6 0,-21 Z" fill="#8fd3ff" opacity="0.9"/>`;
+  return `<path d="M388,${y.toFixed(1)} q9,15 0,21 q-9,-6 0,-21 Z" fill="#8fd3ff" fill-opacity="0.9"/>`;
 }
 
 export function drawWick({ t = 0, mood = 'calm', mouth: m = 'closed', blink = 0, flameSize = 1, up = true } = {}) {
@@ -128,7 +128,7 @@ export function drawWick({ t = 0, mood = 'calm', mouth: m = 'closed', blink = 0,
     ${FRONT_ARMS.has(mood) ? '' : arms(mood, t, c)}
     <g id="body">
       <rect x="200" y="300" width="200" height="345" rx="40" fill="${c.body}"/>
-      <rect x="222" y="322" width="26" height="200" rx="13" fill="${c.light}" opacity="0.6"/>
+      <rect x="222" y="322" width="26" height="200" rx="13" fill="${c.light}" fill-opacity="0.6"/>
     </g>
     ${FRONT_ARMS.has(mood) ? arms(mood, t, c) : ''}
     <line id="wick-top" x1="300" y1="302" x2="300" y2="268" stroke="${PALETTE.wick}" stroke-width="8" stroke-linecap="round"/>
@@ -136,8 +136,8 @@ export function drawWick({ t = 0, mood = 'calm', mouth: m = 'closed', blink = 0,
     ${flame(t, size)}
     ${brows(mood)}
     ${eyes(mood, blink)}
-    <ellipse cx="232" cy="460" rx="16" ry="9" fill="#ff8fa3" opacity="${mood === 'excited' ? 0.7 : 0.45}"/>
-    <ellipse cx="368" cy="460" rx="16" ry="9" fill="#ff8fa3" opacity="${mood === 'excited' ? 0.7 : 0.45}"/>
+    <ellipse cx="232" cy="460" rx="16" ry="9" fill="#ff8fa3" fill-opacity="${mood === 'excited' ? 0.7 : 0.45}"/>
+    <ellipse cx="368" cy="460" rx="16" ry="9" fill="#ff8fa3" fill-opacity="${mood === 'excited' ? 0.7 : 0.45}"/>
     ${mouth(m, mood)}
     ${mood === 'tense' || mood === 'apology' ? sweat(t) : ''}
   </g>`;

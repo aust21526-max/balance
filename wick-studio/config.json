@@ -1,11 +1,20 @@
 {
   "fps": 30,
-  "size": { "width": 1080, "height": 1920 },
   "tts": {
     "engine": "kokoro",
     "voice": "am_puck",
-    "speed": 1.05,
+    "speed": 1.15,
     "model": ".cache/tts/kokoro-v1.0.int8.onnx",
     "voices": ".cache/tts/voices-v1.0.bin"
+  },
+  "sizes": {
+    "landscape": {
+      "width": 1920,
+      "height": 1080
+    },
+    "vertical": {
+      "width": 1080,
+      "height": 1920
+    }
   }
 }

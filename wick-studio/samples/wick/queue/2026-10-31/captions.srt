@@ -1,23 +1,23 @@
 1
-00:00:00,000 --> 00:00:02,981
+00:00:00,200 --> 00:00:02,287
 Weekly close or it didn't happen. And it happened.
 
 2
-00:00:03,000 --> 00:00:05,704
+00:00:02,327 --> 00:00:04,147
 3 stocks qualified at Friday's close.
 
 3
-00:00:08,000 --> 00:00:11,749
+00:00:04,187 --> 00:00:07,073
 Free sample this week: Demo Corp. It passed the weekly close.
 
 4
-00:00:17,000 --> 00:00:21,731
+00:00:07,113 --> 00:00:10,733
 Heads up. Earnings on Nov 4. Expect volatility around the report.
 
 5
-00:00:23,000 --> 00:00:26,756
+00:00:10,773 --> 00:00:13,660
 Every call gets graded. Wins and losses, all public.
 
 6
-00:00:26,756 --> 00:00:29,545
+00:00:13,700 --> 00:00:15,867
 Full list for members. See you next Saturday.
