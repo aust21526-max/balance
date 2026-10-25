@@ -25,11 +25,14 @@ const BANNED = /\b(scores?|scored|ranked|ranking|rank|top pick|number one|highes
 const PRICE_OR_PCT = /%|\bpercent\b|\$\s?\d|\d+(\.\d+)?\s?(usd|dollars?)\b/i;
 const words = (s) => String(s ?? '').trim().split(/\s+/).filter(Boolean).length;
 
+const PARTIAL = new Set(['FIRST TARGET', 'SECOND TARGET']);
+
 // Normalises the many ways exit_kind may be spelled in the ledger.
-export function exitStamp(kind) {
+export function exitStamp(kind, target) {
   const k = String(kind ?? '').toLowerCase();
-  // A partial take-profit sells half at the first target; the rest is still open, so it is not a win yet.
-  if (/partial/.test(k)) return 'FIRST TARGET';
+  // Partial take-profits: a quarter at the middle band (FIRST TARGET), half at the upper band (SECOND TARGET).
+  // The rest is still open, so neither is a win yet.
+  if (/partial/.test(k)) return /upper/i.test(String(target ?? '')) ? 'SECOND TARGET' : 'FIRST TARGET';
   if (/tp|take|profit/.test(k)) return 'TAKE-PROFIT';
   if (/sl|stop/.test(k) && !/trail/.test(k)) return 'STOPPED OUT';
   if (/trail|chand/.test(k)) return 'TRAILING EXIT';
@@ -74,9 +77,9 @@ export function trackedPicks(history) {
         const pick = picks.get(String(c.symbol).toUpperCase());
         if (!pick || (pick.signalWeek && c.signal_week && pick.signalWeek !== c.signal_week)) continue;
         const v = Number(c.vs_spy_pct);
-        pick.stamp = exitStamp(c.exit_kind) ?? pick.stamp;
+        pick.stamp = exitStamp(c.exit_kind, c.target) ?? pick.stamp;
         // vs SPY is only final once the whole position has closed.
-        pick.vsSpy = pick.stamp !== 'FIRST TARGET' && Number.isFinite(v) ? (v >= 0 ? 'BEAT SPY' : 'TRAILED SPY') : null;
+        pick.vsSpy = !PARTIAL.has(pick.stamp) && Number.isFinite(v) ? (v >= 0 ? 'BEAT SPY' : 'TRAILED SPY') : null;
       }
     }
   }
@@ -164,15 +167,15 @@ export function resolveCard(card, packet, queueDir, history = []) {
     for (const sym of pick) {
       const c = list.find((x) => String(x.symbol).toUpperCase() === sym);
       if (!c) { errors.push(`items: ${sym} is not in packet.monday.new_closes`); continue; }
-      const stamp = exitStamp(c.exit_kind);
+      const stamp = exitStamp(c.exit_kind, c.target);
       if (!stamp) errors.push(`items: ${sym} has unknown exit_kind "${c.exit_kind}"`);
       const v = Number(c.vs_spy_pct);
-      const final = stamp !== 'FIRST TARGET';
+      const final = !PARTIAL.has(stamp);
       out.rows.push({ symbol: sym, company: signalFor(packet, sym)?.company ?? c.company, stamp, vsSpy: final && Number.isFinite(v) ? (v >= 0 ? 'BEAT SPY' : 'TRAILED SPY') : null });
     }
     const sc = packet.monthly_scorecard;
     if (sc) out.stats.scorecard = { wins: sc.wins, losses: sc.losses, beatSpy: sc.beat_spy ?? sc.beat_spy_count };
-    const finals = out.rows.filter((r) => r.stamp !== 'FIRST TARGET');
+    const finals = out.rows.filter((r) => !PARTIAL.has(r.stamp));
     const losses = finals.filter((r) => r.stamp === 'STOPPED OUT').length;
     if (!card.mood && losses > finals.length - losses) out.mood = 'apology';
   }
