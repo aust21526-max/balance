@@ -1,5 +1,5 @@
 @echo off
-rem Weekly Wick auto-render, run by Windows Task Scheduler every 30 minutes.
+rem Weekly Wick auto-render, run by the "WeeklyWick Render" task (see install-task.ps1).
 rem Renders queue/<date> folders whose card.json or script.md changed (see render.mjs --pending).
 rem Needs Git for Windows; change GITBASH below if it is installed elsewhere.
 setlocal

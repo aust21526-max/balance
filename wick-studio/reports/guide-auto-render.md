@@ -1,6 +1,6 @@
 # 자동 렌더 설정 (명재 PC, Windows)
 
-그록봇이 Drive `wick/queue/<날짜>/`에 `card.json`이나 `script.md`를 쓰면, PC가 30분마다 확인해서 `card.png`·`render.mp4`를 자동으로 만듭니다. 결과는 Drive 동기화로 바로 올라갑니다.
+그록봇이 Drive `wick/queue/<날짜>/`에 `card.json`이나 `script.md`를 쓰면, PC가 정해진 시각(매일 17:12·17:38·18:10·18:40·21:10)에 확인해서 `card.png`·`render.mp4`를 자동으로 만듭니다. 결과는 Drive 동기화로 바로 올라갑니다.
 
 ## 한 번만 하면 되는 준비
 
@@ -9,7 +9,7 @@
 3. Git Bash에서 `wick-studio` 폴더로 가서 `./setup.sh` 실행
 4. `wick-studio/.env`의 `WICK_DIR`를 Drive `wick` 폴더 경로로 수정 (예: `WICK_DIR="G:/내 드라이브/wick"`)
 5. 시험: `./render.sh --pending` → `pending: N rendered, 0 failed`가 나오면 성공
-6. `wick-studio/scripts/windows/install-task.cmd`를 더블클릭 → 작업 스케줄러에 "WeeklyWick Render"가 30분 간격으로 등록됨
+6. `wick-studio/scripts/windows/install-task.cmd`를 더블클릭 → 작업 스케줄러에 "WeeklyWick Render"가 위 시각으로 등록됨(창 없이 실행)
 
 ## 동작 규칙
 
@@ -19,14 +19,21 @@
 - 기록: `wick-studio/out/pending.log`
 - 영상은 렌더에 1~2분 걸리고 PC가 깨어 있어야 합니다. 절전 중이면 아래 "절전과 자동 깨우기"의 시각에 PC가 스스로 깹니다.
 
-## 절전과 자동 깨우기
+## 실행 시각과 절전
 
-`install-task.cmd`는 "WeeklyWick Wake" 작업도 함께 등록합니다.
+시각은 Drive 패킷 저장(17:05·18:05)과 그록봇 일정(초안 17:30, 게시 패키지 18:15, 재확인 18:45)에 맞췄습니다.
 
-- PC가 절전 중이어도 **매일 17:20·18:20, 토요일 17:50**에 스스로 깨어납니다(Drive 패킷 저장 17:05·18:05 직후).
-- 깨어나면 Drive가 동기화되도록 4분 기다린 뒤 "WeeklyWick Render"를 돌리고, 끝날 때까지 PC를 깨워 둡니다. 끝나면 평소 절전 규칙대로 다시 잠듭니다.
-- 30분 점검은 PC가 깨어 있을 때만 돌고 PC를 깨우지 않습니다. 놓친 점검은 깨어나는 즉시 한 번 돕니다.
-- 배터리로 쓸 때도 돌고, 전원 옵션의 "절전 모드 해제 타이머 허용"을 켭니다.
+| 시각 | 하는 일 |
+|---|---|
+| 17:12 | 첫 패킷을 앱으로 |
+| 17:38 | 17:30 초안의 카드·영상 렌더 |
+| 18:10 | 두 번째 패킷 + 18:00 전후 차트 스냅샷 반영 (18:15 패키지 전) |
+| 18:40 | 늦게 들어온 것 (18:45 재확인 전) |
+| 21:10 | 저녁 마무리 |
+
+- 창이 뜨지 않고 뒤에서 돕니다. 기록은 `out/pending.log`.
+- PC가 절전 중이면 그 시각에 스스로 깨어나고, 끝날 때까지 깨워 둡니다. 놓친 시각은 깨어나는 즉시 한 번 돕니다.
+- 이 PC는 최신 대기 모드(S0)라 전원 연결 시 절전 안 함(`powercfg /change standby-timeout-ac 0`)을 함께 쓰는 것이 가장 확실합니다.
 - PC 시계가 한국 시간이어야 합니다. 완전히 종료하거나 재부팅 후 로그인하지 않은 상태에서는 돌지 않습니다.
 - 등록 중 오류가 나면 `install-task.cmd`를 마우스 오른쪽 → "관리자 권한으로 실행"합니다.
 
@@ -44,4 +51,4 @@
 
 ## 끄기
 
-명령 프롬프트에서 `schtasks /Delete /TN "WeeklyWick Render" /F`와 `schtasks /Delete /TN "WeeklyWick Wake" /F`
+명령 프롬프트에서 `schtasks /Delete /TN "WeeklyWick Render" /F`
