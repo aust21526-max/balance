@@ -81,9 +81,10 @@ export function resolveCard(card, packet, queueDir) {
       const sym = String(it.symbol ?? '').toUpperCase();
       const sig = signalFor(packet, sym);
       if (!sig) { errors.push(`items: ${sym} is not in packet.signals`); continue; }
-      if (sig.publish_eligible !== true) errors.push(`items: ${sym} has publish_eligible != true`);
       if (!allowed.has(sym)) { errors.push(`items: ${sym} is not a free pick or vanished log (publish: "${sig.publish ?? '-'}")`); continue; }
       const vanished = sig.publish === 'free post: vanished log';
+      // Vanished names carry publish_eligible: null in real packets; their publish value is what clears them.
+      if (!vanished && sig.publish_eligible !== true) errors.push(`items: ${sym} has publish_eligible != true`);
       if (!vanished && sig.status !== 'QUALIFIED') errors.push(`items: ${sym} status is ${sig.status}, not QUALIFIED`);
       const blurb = it.about ? sig.company_blurb : null;
       if (it.about && !blurb) warnings.push(`items: ${sym} has about:true but no company_blurb — shown without it`);

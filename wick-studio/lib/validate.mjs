@@ -51,7 +51,7 @@ export function validate({ script, packet, queueDir }) {
     for (const sym of seg.onScreen.tickers) {
       const sig = signalFor(packet, sym);
       if (!sig) { errors.push(`${where}: ${sym} is not in packet.signals`); continue; }
-      if (sig.publish_eligible !== true) errors.push(`${where}: ${sym} has publish_eligible != true`);
+      if (sig.publish_eligible !== true && sig.publish !== 'free post: vanished log') errors.push(`${where}: ${sym} has publish_eligible != true`);
       if (!allowed.has(sym)) errors.push(`${where}: ${sym} is not a free pick (publish: "${sig.publish ?? '-'}") — only free_picks may be named`);
       for (const b of seg.onScreen.badges) {
         if (b !== sig.status) errors.push(`${where}: badge ${b} does not match ${sym} status ${sig.status}`);
