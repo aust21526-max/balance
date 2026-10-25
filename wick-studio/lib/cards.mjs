@@ -170,16 +170,24 @@ function resultsBody(style, L, card, y0) {
     if (split) parts.forEach((p, i) => { s += `<text x="${C.sx + 30}" y="${C.sy + 105 + i * 60}" font-family="Inter" font-size="46" font-weight="900" fill="${S.fg}">${p}</text>`; });
     else s += `<text x="${C.sx + 30}" y="${C.sy + 90}" font-family="Inter" font-size="40" font-weight="900" fill="${S.fg}">${parts.join(' · ')}</text>`;
   }
+  // Rows shrink to fit the space above the footer; past MAX_ROWS the rest is summarised.
+  const MAX_ROWS = 8;
+  const shown = card.rows.slice(0, MAX_ROWS);
+  const extra = card.rows.length - shown.length;
+  const bottom = L.footY - 50 - (extra ? 50 : 0);
+  const rowH = Math.max(88, Math.min(150, (bottom - C.ry) / Math.max(1, shown.length)));
+  const k = rowH / 150;
   let y = C.ry;
-  for (const row of card.rows) {
+  for (const row of shown) {
     s += `<line x1="${C.rx}" y1="${y}" x2="${C.rx + C.rw}" y2="${y}" stroke="${S.rule}" stroke-width="3"/>`;
-    s += `<text x="${C.rx}" y="${y + 74}" font-family="Inter" font-size="60" font-weight="900" fill="${S.fg}">$${esc(row.symbol)}</text>`;
-    if (row.company) s += `<text x="${C.rx}" y="${y + 112}" font-family="Inter" font-size="28" font-weight="700" fill="${S.muted}">${esc(row.company)}</text>`;
+    s += `<text x="${C.rx}" y="${y + 74 * k}" font-family="Inter" font-size="${(60 * Math.max(k, 0.8)).toFixed(0)}" font-weight="900" fill="${S.fg}">$${esc(row.symbol)}</text>`;
+    if (row.company && k > 0.85) s += `<text x="${C.rx}" y="${y + 112 * k}" font-family="Inter" font-size="28" font-weight="700" fill="${S.muted}">${esc(row.company)}</text>`;
     const sx = C.rx + C.rw - STAMP_COL / 2;
-    if (row.stamp) s += stamp(style, row.stamp, sx, y + 52, 32, -7).svg;
-    if (row.vsSpy) s += stamp(style, row.vsSpy, sx, y + 114, 22, -3).svg;
-    y += 150;
+    if (row.stamp) s += stamp(style, row.stamp, sx, y + 52 * k, 32 * Math.max(k, 0.8), -7).svg;
+    if (row.vsSpy) s += stamp(style, row.vsSpy, sx, y + 114 * k, 22 * Math.max(k, 0.8), -3).svg;
+    y += rowH;
   }
+  if (extra) s += `<text x="${C.rx}" y="${y + 40}" font-family="Inter" font-size="32" font-weight="800" fill="${S.muted}">+${extra} more on the record</text>`;
   return s;
 }
 

@@ -12,8 +12,31 @@ export function findPacket(wickDir, date) {
   return files.length ? join(dir, files[files.length - 1]) : null;
 }
 
+// Real packets name stocks with their exchange ("NYSE:EFC") while free_picks and scripts
+// use the bare ticker ("EFC"). Normalise once on load: every symbol becomes the bare
+// ticker and the exchange is kept alongside it.
+export function normalizePacket(p) {
+  const bare = (sym) => String(sym).split(':').pop().trim().toUpperCase();
+  const walk = (v) => {
+    if (Array.isArray(v)) return v.map(walk);
+    if (v && typeof v === 'object') {
+      const out = {};
+      for (const [k, x] of Object.entries(v)) out[k] = walk(x);
+      if (typeof v.symbol === 'string') {
+        out.symbol = bare(v.symbol);
+        if (v.symbol.includes(':') && !out.exchange) out.exchange = v.symbol.split(':')[0];
+      }
+      return out;
+    }
+    return v;
+  };
+  const out = walk(p);
+  if (Array.isArray(out.free_picks)) out.free_picks = out.free_picks.map((x) => (typeof x === 'string' ? bare(x) : x));
+  return out;
+}
+
 export function loadPacket(path) {
-  return JSON.parse(readFileSync(path, 'utf8'));
+  return normalizePacket(JSON.parse(readFileSync(path, 'utf8')));
 }
 
 export const signals = (p) => (Array.isArray(p.signals) ? p.signals : []);
@@ -40,7 +63,7 @@ export function qualifiedCount(p) {
   const n = signals(p).filter((s) => s.status === 'QUALIFIED').length;
   if (n) return n;
   const s = p.summary ?? {};
-  return Number(s.qualified ?? s.qualified_count ?? s.passed ?? s.candidates ?? s.candidate_count ?? 0) || 0;
+  return Number(s.qualified ?? s.qualified_count ?? s.passed_50 ?? s.passed ?? 0) || 0;
 }
 
 // Flame size from the week's pass count: 0 -> tiny, 10+ -> full blaze.

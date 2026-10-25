@@ -43,7 +43,7 @@ function topTags(packet, n = 3) {
 
 function candidateCount(packet) {
   const s = packet.summary ?? {};
-  const n = Number(s.candidates ?? s.candidate_count);
+  const n = Number(s.candidates ?? s.candidate_count ?? s.passed_50);
   return Number.isFinite(n) ? n : signals(packet).filter((x) => x.status === 'CANDIDATE').length;
 }
 
