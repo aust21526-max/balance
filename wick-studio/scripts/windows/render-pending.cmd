@@ -10,5 +10,7 @@ if not exist out mkdir out
 rem Keep Git Bash in this folder (a login shell would otherwise cd to $HOME).
 set CHERE_INVOKING=1
 "%GITBASH%" -lc "./render.sh --pending" >> out\pending.log 2>&1
+rem Then push any new packets / member notes to the members app (needs MEMBERS_DIR in .env).
+"%GITBASH%" -lc "./scripts/members-sync.sh" >> out\pending.log 2>&1
 popd
 endlocal

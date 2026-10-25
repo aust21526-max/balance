@@ -19,6 +19,14 @@
 - 기록: `wick-studio/out/pending.log`
 - 영상은 렌더에 1~2분 걸리고 PC가 켜져 있어야 합니다. 토요일 17:30~18:00에는 PC를 켜 두세요.
 
+## 멤버십 앱으로 데이터 보내기
+
+렌더가 끝나면 같은 작업이 `scripts/members-sync.sh`를 돌립니다. Drive `wick/packets`와 `wick/members`에 새 파일이 있으면 `weekly-wick-members` 저장소로 복사해 커밋·푸시하고, Vercel이 앱을 다시 배포합니다. 바뀐 게 없으면 아무것도 하지 않습니다.
+
+- 한 번만: `weekly-wick-members`를 `balance` 옆에 클론하고, `wick-studio/.env`에 `MEMBERS_DIR="C:/Users/<나>/weekly-wick-members"`를 추가합니다.
+- `MEMBERS_DIR`이 없으면 이 단계는 건너뜁니다.
+- 기록은 `out/pending.log`에 `members: data pushed` / `members: no new data`로 남습니다.
+
 ## 코드 업데이트
 
 클로드코드가 렌더 코드를 고쳤다고 하면 `wick-studio/scripts/windows/update.cmd`를 더블클릭합니다. 최신 코드를 받아 오고, 자동 렌더는 다음 실행부터 새 코드로 돕니다.
