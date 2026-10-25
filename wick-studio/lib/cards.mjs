@@ -1,4 +1,4 @@
-// Image cards (handoff §3): verdict / results / race in two style sets.
+// Image cards (handoff §3): verdict / results / race / track in two style sets.
 //   A "Scoreboard": dark navy, filled stamps — matches the video.
 //   B "Judges' sheet": cream ruled paper, worn ink stamps — stands out in a dark feed.
 // Layout, margins and Wick's spot are fixed per size so the account is recognisable;
@@ -16,11 +16,11 @@ const STYLES = {
   B: { name: "Judges' sheet", bg: '#f3ede1', fg: '#1b1f2a', muted: '#6b6457', panel: '#e9e0cd', rule: '#ddd2bd', band: '#1b1f2a', bandFg: '#f3ede1', ink: true },
 };
 const STAMP_COLORS = {
-  A: { QUALIFIED: '#22c47a', VANISHED: '#8a93a6', 'EARNINGS WEEK': '#ff6a3d', 'TAKE-PROFIT': '#22c47a', 'STOPPED OUT': '#ef5350', 'TRAILING EXIT': '#4c8dff', CANDIDATES: '#ffb020', 'BEAT SPY': '#22c47a', 'TRAILED SPY': '#ef5350' },
-  B: { QUALIFIED: '#1f8a54', VANISHED: '#6b6457', 'EARNINGS WEEK': '#d9631e', 'TAKE-PROFIT': '#1f8a54', 'STOPPED OUT': '#c0392b', 'TRAILING EXIT': '#2763c4', CANDIDATES: '#b7791f', 'BEAT SPY': '#1f8a54', 'TRAILED SPY': '#c0392b' },
+  A: { QUALIFIED: '#22c47a', VANISHED: '#8a93a6', 'EARNINGS WEEK': '#ff6a3d', 'TAKE-PROFIT': '#22c47a', 'STOPPED OUT': '#ef5350', 'TRAILING EXIT': '#4c8dff', CANDIDATES: '#ffb020', 'BEAT SPY': '#22c47a', 'TRAILED SPY': '#ef5350', 'STILL OPEN': '#ffb020' },
+  B: { QUALIFIED: '#1f8a54', VANISHED: '#6b6457', 'EARNINGS WEEK': '#d9631e', 'TAKE-PROFIT': '#1f8a54', 'STOPPED OUT': '#c0392b', 'TRAILING EXIT': '#2763c4', CANDIDATES: '#b7791f', 'BEAT SPY': '#1f8a54', 'TRAILED SPY': '#c0392b', 'STILL OPEN': '#b7791f' },
 };
 const STAMP_COL = 330; // right-hand column that holds a row's stamps
-const HEADER = { verdict: 'WEEKLY VERDICT', results: 'EXIT REPORT', race: 'CANDIDATE RACE' };
+const HEADER = { verdict: 'WEEKLY VERDICT', results: 'EXIT REPORT', race: 'CANDIDATE RACE', track: 'PICK TRACKER' };
 
 let uid = 0;
 export function stamp(style, label, x, y, size, rot = -7) {
@@ -48,11 +48,12 @@ export function stamp(style, label, x, y, size, rot = -7) {
 }
 
 // Top badge: CONFIRMED on the Saturday verdict, GRADED on Monday's exit report
-// (closed trades, nothing left to confirm), LIVE on weekday cards.
+// (closed trades, nothing left to confirm), TRACKED on Tuesday's free-pick follow-up,
+// LIVE on weekday race cards.
 function statusPill(style, type, x, y) {
-  const kind = type === 'weekly_confirm' ? 'confirmed' : type === 'results' ? 'graded' : 'live';
-  const label = { confirmed: 'CONFIRMED · Weekly close', graded: 'GRADED · Exit report', live: 'LIVE · Confirms at Friday close' }[kind];
-  const bg = { confirmed: '#22c47a', graded: '#7fb2ff', live: '#ffb020' }[kind];
+  const kind = type === 'weekly_confirm' ? 'confirmed' : type === 'results' ? 'graded' : type === 'track' ? 'tracked' : 'live';
+  const label = { confirmed: 'CONFIRMED · Weekly close', graded: 'GRADED · Exit report', tracked: 'TRACKED · Every free pick', live: 'LIVE · Confirms at Friday close' }[kind];
+  const bg = { confirmed: '#22c47a', graded: '#7fb2ff', tracked: '#7fb2ff', live: '#ffb020' }[kind];
   const live = kind === 'live';
   const size = 24, padX = 18, h = 44, w = textWidth(label, size, 0.62) + padX * 2 + (live ? 22 : 0);
   return `<g><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}" fill="${bg}"/>
@@ -218,7 +219,8 @@ function raceBody(style, L, card, y0) {
 export function renderCardSvg(card, { style = 'A', size = 'portrait', handle = '@Aistockpo' } = {}) {
   const L = layout(size);
   const f = frame(style, L, card, handle);
-  const body = { verdict: verdictBody, results: resultsBody, race: raceBody }[card.template](style, L, card, f.bodyY);
+  // The tracker lists past free picks with their latest grade: the exit report's row layout.
+  const body = { verdict: verdictBody, results: resultsBody, race: raceBody, track: resultsBody }[card.template](style, L, card, f.bodyY);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${L.W}" height="${L.H}" viewBox="0 0 ${L.W} ${L.H}">${f.svg}${body}${wick(L, card)}</svg>`;
 }
 

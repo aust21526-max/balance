@@ -241,13 +241,26 @@ function renderCard({ date, wickDir, queueDir, wide, style }) {
   try { raw = JSON.parse(readFileSync(cardPath, 'utf8')); } catch (e) { throw new RenderError([`card.json is not valid JSON: ${e.message}`]); }
   if (!['A', 'B'].includes(style)) throw new RenderError([`--style must be A or B (got "${style}")`]);
   const packetPath = findPacket(wickDir, date, packetTypeFor({ template: raw.template }));
-  const { errors, warnings, card } = resolveCard(raw, packetPath ? loadPacket(packetPath) : null, queueDir);
+  const history = raw.template === 'track' ? recentPackets(wickDir, date, 56) : [];
+  const { errors, warnings, card } = resolveCard(raw, packetPath ? loadPacket(packetPath) : null, queueDir, history);
   if (errors.length) throw new RenderError(errors, warnings);
   const out = join(queueDir, 'card.png');
   writeFileSync(out, svgToPng(renderCardSvg(card, { style, size: wide ? 'wide' : 'portrait', handle: CFG.handle })));
   rmSync(join(queueDir, 'error.md'), { force: true });
   for (const w of warnings) console.warn(`warning: ${w}`);
   console.log(`done: ${out}`);
+}
+
+// Every packet from the `days` days up to the date, oldest first (the tracker's history).
+function recentPackets(wickDir, date, days) {
+  const dir = join(wickDir, 'packets');
+  if (!existsSync(dir)) return [];
+  const from = new Date(Date.parse(`${date}T00:00:00Z`) - days * 86400e3).toISOString().slice(0, 10);
+  const out = [];
+  for (const f of readdirSync(dir).filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f) && f.slice(0, 10) <= date && f.slice(0, 10) >= from).sort()) {
+    try { out.push(loadPacket(join(dir, f))); } catch (e) { console.warn(`warning: skipped ${f}: ${e.message}`); }
+  }
+  return out;
 }
 
 const mtime = (p) => (existsSync(p) ? statSync(p).mtimeMs : 0);

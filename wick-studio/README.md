@@ -37,7 +37,7 @@ cd wick-studio
 | `lib/motion.mjs` | 스프링·이징·흔들림, 고정 시드 난수 |
 | `lib/pool.mjs`, `lib/raster-worker.mjs` | CPU 코어 수만큼 병렬 렌더 (순서 유지) |
 | `lib/card-data.mjs` | `card.json` 검증, 도장·통과 수·태그를 패킷에서 계산 |
-| `lib/cards.mjs` | 카드 템플릿 3종(verdict / results / race) × 스타일 2종, 세로·가로 |
+| `lib/cards.mjs` | 카드 템플릿 4종(verdict / results / track / race) × 스타일 2종, 세로·가로 |
 | `lib/scene.mjs` | 공용 색·배지 헬퍼 |
 | `assets/wick/` | 표정 5종 × 상승/하락 정지 이미지 (`node scripts/wick-stills.mjs`로 재생성) |
 | `scripts/brand-assets.mjs` | X 프로필 사진(400×400, 평온·신남 2종)과 헤더(1500×500) — `node scripts/brand-assets.mjs` → `out/brand/` |

@@ -8,6 +8,8 @@
 //   "items": [{ "symbol": "NVDA", "about": true }],   verdict/results only; race has none ("ticker" also accepted)
 //   "chart": "NVDA"                       optional, uses charts/NVDA.png (verdict only)
 // }
+// "track" (Tuesday) follows up past free picks: items optional, default = every free pick
+// of the last 8 weeks; each row shows its latest grade from later monday_confirm packets.
 //
 // Stamps are never taken from card.json: they come from the packet (status, publish,
 // earnings_caution, monday.new_closes), so a card cannot mislabel a stock.
@@ -16,7 +18,7 @@ import { packetNumbers, publicSymbols, qualifiedCount, signalFor, signals, weekD
 import { MOODS } from './script.mjs';
 import { chartPath } from './validate.mjs';
 
-export const TEMPLATES = ['verdict', 'results', 'race'];
+export const TEMPLATES = ['verdict', 'results', 'race', 'track'];
 const BANNED = /\b(scores?|scored|ranked|ranking|rank|top pick|number one|highest|best|guarantee[sd]?|sure thing|must buy|buy now|buy|sell)\b|#\s?1\b/i;
 const PRICE_OR_PCT = /%|\bpercent\b|\$\s?\d|\d+(\.\d+)?\s?(usd|dollars?)\b/i;
 const words = (s) => String(s ?? '').trim().split(/\s+/).filter(Boolean).length;
@@ -47,7 +49,36 @@ function candidateCount(packet) {
   return Number.isFinite(n) ? n : signals(packet).filter((x) => x.status === 'CANDIDATE').length;
 }
 
-export function resolveCard(card, packet, queueDir) {
+// Past free picks and their latest grade, from the packets of the last 8 weeks (oldest
+// first). A pick stays STILL OPEN until a later Monday packet closes or vanishes it.
+export function trackedPicks(history) {
+  const picks = new Map();
+  for (const p of history) {
+    if (p.packet_type === 'weekly_verdict') {
+      for (const sym of (Array.isArray(p.free_picks) ? p.free_picks : []).map((x) => String(typeof x === 'string' ? x : x?.symbol).toUpperCase())) {
+        const sig = signalFor(p, sym);
+        if (!picks.has(sym)) picks.set(sym, { symbol: sym, company: sig?.company, signalWeek: sig?.signal_week, picked: p.snapshot_date, stamp: 'STILL OPEN', vsSpy: null });
+      }
+    }
+    if (p.packet_type === 'monday_confirm') {
+      const m = p.monday ?? {};
+      for (const v of Array.isArray(m.vanished) ? m.vanished : []) {
+        const pick = picks.get(String(v?.symbol ?? v).split(':').pop().toUpperCase());
+        if (pick && pick.stamp === 'STILL OPEN') pick.stamp = 'VANISHED';
+      }
+      for (const c of Array.isArray(m.new_closes) ? m.new_closes : []) {
+        const pick = picks.get(String(c.symbol).toUpperCase());
+        if (!pick || (pick.signalWeek && c.signal_week && pick.signalWeek !== c.signal_week)) continue;
+        const v = Number(c.vs_spy_pct);
+        pick.stamp = exitStamp(c.exit_kind) ?? pick.stamp;
+        pick.vsSpy = Number.isFinite(v) ? (v >= 0 ? 'BEAT SPY' : 'TRAILED SPY') : null;
+      }
+    }
+  }
+  return [...picks.values()];
+}
+
+export function resolveCard(card, packet, queueDir, history = []) {
   const errors = [], warnings = [];
   const t = card.template;
   if (!TEMPLATES.includes(t)) errors.push(`card.json: template must be one of ${TEMPLATES.join(', ')} (got "${t}")`);
@@ -58,6 +89,7 @@ export function resolveCard(card, packet, queueDir) {
   if (!packet) { errors.push('packet: no packets/<YYYY-MM-DD>.json on or before this date'); return { errors, warnings }; }
 
   const numbers = packetNumbers(packet);
+  for (const p of history) for (const n of packetNumbers(p)) numbers.add(n);
   for (const [field, text] of [['title', card.title], ['subtitle', card.subtitle]]) {
     if (!text) continue;
     const bad = text.match(BANNED);
@@ -69,8 +101,8 @@ export function resolveCard(card, packet, queueDir) {
   const items = Array.isArray(card.items) ? card.items : [];
   const out = {
     template: t, title: card.title, subtitle: card.subtitle ?? '',
-    type: t === 'verdict' ? 'weekly_confirm' : t === 'results' ? 'results' : 'candidate_race',
-    mood: card.mood ?? { verdict: 'excited', results: 'calm', race: 'tense' }[t] ?? 'calm',
+    type: { verdict: 'weekly_confirm', results: 'results', track: 'track' }[t] ?? 'candidate_race',
+    mood: card.mood ?? { verdict: 'excited', results: 'calm', race: 'tense', track: 'calm' }[t] ?? 'calm',
     flameSize: null, up: weekDirection(packet).up, rows: [], chart: null, stats: {},
   };
 
@@ -116,6 +148,18 @@ export function resolveCard(card, packet, queueDir) {
     if (sc) out.stats.scorecard = { wins: sc.wins, losses: sc.losses, beatSpy: sc.beat_spy ?? sc.beat_spy_count };
     const losses = out.rows.filter((r) => r.stamp === 'STOPPED OUT').length;
     if (!card.mood && losses > out.rows.length - losses) out.mood = 'apology';
+  }
+
+  if (t === 'track') {
+    const picks = trackedPicks(history);
+    if (!picks.length) errors.push('track card: no free picks in the weekly_verdict packets of the last 8 weeks');
+    const want = items.map((i) => String(i.symbol ?? i.ticker).toUpperCase());
+    for (const sym of want) if (!picks.some((p) => p.symbol === sym)) errors.push(`items: ${sym} was not a free pick in the last 8 weeks — only past free picks can be tracked by name`);
+    out.rows = want.length ? picks.filter((p) => want.includes(p.symbol)) : picks;
+    const losses = out.rows.filter((r) => r.stamp === 'STOPPED OUT').length;
+    const wins = out.rows.filter((r) => r.stamp === 'TAKE-PROFIT' || r.stamp === 'TRAILING EXIT').length;
+    if (!card.mood && losses > wins) out.mood = 'apology';
+    if (card.chart) errors.push('track card must not show a chart');
   }
 
   if (t === 'race') {
