@@ -23,7 +23,7 @@ const STAMP_COL = 330; // right-hand column that holds a row's stamps
 const HEADER = { verdict: 'WEEKLY VERDICT', results: 'EXIT REPORT', race: 'CANDIDATE RACE' };
 
 let uid = 0;
-function stamp(style, label, x, y, size, rot = -7) {
+export function stamp(style, label, x, y, size, rot = -7) {
   const color = STAMP_COLORS[style][label] ?? '#888';
   const w = textWidth(label, size, 0.64) + size * 1.4, h = size * 1.9;
   const text = `<text x="0" y="${(size * 0.36).toFixed(1)}" font-family="Inter" font-size="${size}" font-weight="900" text-anchor="middle" letter-spacing="${(size * 0.04).toFixed(1)}"`;

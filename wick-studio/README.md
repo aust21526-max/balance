@@ -39,6 +39,7 @@ cd wick-studio
 | `lib/cards.mjs` | 카드 템플릿 3종(verdict / results / race) × 스타일 2종, 세로·가로 |
 | `lib/scene.mjs` | 공용 색·배지 헬퍼 |
 | `assets/wick/` | 표정 5종 × 상승/하락 정지 이미지 (`node scripts/wick-stills.mjs`로 재생성) |
+| `scripts/brand-assets.mjs` | X 프로필 사진(400×400, 평온·신남 2종)과 헤더(1500×500) — `node scripts/brand-assets.mjs` → `out/brand/` |
 | `characters/rig.mjs` | 캐릭터 리그 — A안 Candle Buddy (표정 5종, 입 모양 4종, 깜빡임, 불꽃 일렁임). 캐릭터를 바꾸려면 이 파일만 교체 |
 | `characters/drafts.mjs` | 첫 코드 시안 3안 (A안 채택) |
 | `characters/gpt-prompts.md` | ChatGPT 이미지 시안 프롬프트 |
