@@ -15,6 +15,9 @@
 - 계정 핸들은 **@weeklywick**으로 바꿀 예정입니다(Premium 가입 전에 변경).
 - 게시글·답글·프로필 문구는 @weeklywick 기준으로 씁니다. 카드 하단에도 @weeklywick이 찍힙니다.
 
-## 3. 프로필 문구 초안 (수정본)
+## 3. 프로필 소개 (확정, 1안)
 
-> Judging US stocks at the weekly close. Pass/fail only, every call graded vs the S&P 500. Not financial advice. Losses possible.
+> Weekly close or it didn't happen. 🕯️ I judge US stocks once a week: pass or vanish. Every call graded vs SPY, even the ugly ones. Not financial advice.
+
+- 151자(X 제한 160자 이내). 이모지 🕯️ 포함.
+- 유료 채널을 열고 유사투자자문업 신고를 마치면 신고 사업자 표기와 원금 손실 가능성 문구를 추가해야 합니다.
