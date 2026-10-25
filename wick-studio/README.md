@@ -20,7 +20,7 @@ cd wick-studio
 ./render.sh 2026-10-31 --wide          # 영상 16:9
 ```
 
-카드 입력은 `$WICK_DIR/queue/<날짜>/card.json`(형식: `reports/guide-card-json.md`), 영상 입력은 `script.md`입니다. 둘 다 그 날짜 이전 최신 `$WICK_DIR/packets/<날짜>.json`과 차트 스냅샷 `$WICK_DIR/queue/<날짜>/charts/<TICKER>.png`(TradingView에서 저장)를 씁니다. 점검에 실패하면 렌더하지 않고 `queue/<날짜>/error.md`에 이유를 씁니다. `WICK_DIR` 없이 실행하면 `samples/wick`의 샘플 데이터로 렌더합니다. 카드 스타일은 `config.json`의 `cards.style`(A 스코어보드 / B 판정표), 한 번만 바꾸려면 `--style B`.
+카드 입력은 `$WICK_DIR/queue/<날짜>/card.json`(형식: `reports/guide-card-json.md`), 영상 입력은 `script.md`입니다. 둘 다 그 날짜 이전 최신 `$WICK_DIR/packets/<날짜>.json`과 차트 스냅샷 `$WICK_DIR/queue/<날짜>/charts/<TICKER>.png`(TradingView에서 저장)를 씁니다. 점검에 실패하면 렌더하지 않고 `queue/<날짜>/error.md`에 이유를 씁니다. `WICK_DIR` 없이 실행하면 `samples/wick`의 샘플 데이터로 렌더합니다. 카드 스타일은 `config.json`의 `cards.style` — 기본 **B 판정표**(2026-10-25 명재 선택), A 스코어보드는 `--style A`. 하단 핸들은 `config.json`의 `handle`.
 
 ## 구조
 
