@@ -7,7 +7,7 @@ import { esc, wrap } from './text.mjs';
 
 const HL = '#ffd23f'; // active-word highlight
 const ACCENT = { excited: '#22c47a', calm: '#4c8dff', tense: '#ffb020', gloomy: '#ef5350', apology: '#ef5350' };
-const DISCLAIMER = 'Automated account · Not financial advice';
+const DISCLAIMER = 'Not financial advice';
 
 // Group opacity makes resvg composite a full-frame layer, so only emit it mid-fade.
 const fade = (op) => (op < 0.999 ? ` opacity="${op.toFixed(2)}"` : '');
