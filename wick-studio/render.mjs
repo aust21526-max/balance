@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 // Weekly Wick renderer.
-//   node render.mjs <YYYY-MM-DD>              -> queue/<date>/render.mp4 (1920x1080), thumb.png, captions.srt
-//   node render.mjs <YYYY-MM-DD> --vertical   -> same, 1080x1920
-//   node render.mjs <YYYY-MM-DD> --image      -> queue/<date>/image.png (1080x1080 weekday still)
+//   node render.mjs <YYYY-MM-DD>                 -> queue/<date>/render.mp4 (1080x1920), thumb.png, captions.srt
+//   node render.mjs <YYYY-MM-DD> --wide          -> same video at 1920x1080
+//   node render.mjs <YYYY-MM-DD> --card          -> queue/<date>/card.png from card.json (1080x1350)
+//   node render.mjs <YYYY-MM-DD> --card --wide   -> card.png at 1600x900
+//   --style A|B overrides config.cards.style for a card
 // Data folder: $WICK_DIR (the synced Google Drive "wick" folder), default ./samples/wick.
 // On failure the reason is written to queue/<date>/error.md and the exit code is 1.
 import { spawn } from 'node:child_process';
@@ -15,7 +17,8 @@ import { findPacket, flameSizeFor, loadPacket, qualifiedCount, signalFor, weekDi
 import { rasterInOrder } from './lib/pool.mjs';
 import { svgToPng } from './lib/raster.mjs';
 import { chunkAt, chunkWords, fastFrame, layout, sceneKind } from './lib/fast.mjs';
-import { stillImage } from './lib/scene.mjs';
+import { resolveCard } from './lib/card-data.mjs';
+import { renderCardSvg } from './lib/cards.mjs';
 import { mixSoundtrack, SR, to48k } from './lib/sfx.mjs';
 import { parseScript } from './lib/script.mjs';
 import { chartPath, validate } from './lib/validate.mjs';
@@ -34,11 +37,16 @@ class RenderError extends Error {
 function args() {
   const [date, ...flags] = process.argv.slice(2);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date ?? '')) {
-    console.error('usage: ./render.sh <YYYY-MM-DD> [--vertical | --image]');
+    console.error('usage: ./render.sh <YYYY-MM-DD> [--wide] [--card [--style A|B]]');
     process.exit(2);
   }
   const wickDir = resolve(process.env.WICK_DIR || join(ROOT, 'samples', 'wick'));
-  return { date, image: flags.includes('--image'), vertical: flags.includes('--vertical'), wickDir, queueDir: join(wickDir, 'queue', date) };
+  const styleAt = flags.indexOf('--style');
+  return {
+    date, wickDir, queueDir: join(wickDir, 'queue', date),
+    card: flags.includes('--card'), wide: flags.includes('--wide'),
+    style: styleAt >= 0 ? flags[styleAt + 1] : CFG.cards.style,
+  };
 }
 
 function writeError(queueDir, date, err) {
@@ -139,7 +147,7 @@ function cuesFor(placed, count) {
   return cues;
 }
 
-async function renderVideo({ date, wickDir, queueDir, vertical }) {
+async function renderVideo({ date, wickDir, queueDir, wide }) {
   const scriptPath = join(queueDir, 'script.md');
   if (!existsSync(scriptPath)) throw new RenderError([`script.md not found at ${scriptPath}`]);
   const script = parseScript(readFileSync(scriptPath, 'utf8'));
@@ -149,7 +157,7 @@ async function renderVideo({ date, wickDir, queueDir, vertical }) {
   if (errors.length) throw new RenderError(errors, warnings);
   for (const w of warnings) console.warn(`warning: ${w}`);
 
-  const { width: W, height: H } = vertical ? CFG.sizes.vertical : CFG.sizes.landscape;
+  const { width: W, height: H } = wide ? CFG.sizes.landscape : CFG.sizes.vertical;
   const L = layout(W, H);
   const work = join(queueDir, '.work');
   console.log(`[1/4] voice (${CFG.tts.engine}:${CFG.tts.voice})`);
@@ -222,39 +230,25 @@ async function renderVideo({ date, wickDir, queueDir, vertical }) {
   console.log(`done: ${mp4}`);
 }
 
-function renderImage({ date, wickDir, queueDir }) {
+function renderCard({ date, wickDir, queueDir, wide, style }) {
+  const cardPath = join(queueDir, 'card.json');
+  if (!existsSync(cardPath)) throw new RenderError([`card.json not found at ${cardPath}`]);
+  let raw;
+  try { raw = JSON.parse(readFileSync(cardPath, 'utf8')); } catch (e) { throw new RenderError([`card.json is not valid JSON: ${e.message}`]); }
+  if (!['A', 'B'].includes(style)) throw new RenderError([`--style must be A or B (got "${style}")`]);
   const packetPath = findPacket(wickDir, date);
-  if (!packetPath) throw new RenderError(['packet: no packets/<YYYY-MM-DD>.json on or before this date']);
-  const packet = loadPacket(packetPath);
-  const count = qualifiedCount(packet);
-  const { up } = weekDirection(packet);
-  const scriptPath = join(queueDir, 'script.md');
-  let spec;
-  if (existsSync(scriptPath)) {
-    const script = parseScript(readFileSync(scriptPath, 'utf8'));
-    const { errors, warnings } = validate({ script, packet, queueDir });
-    if (errors.length) throw new RenderError(errors, warnings);
-    const seg = script.segments.find((s) => s.onScreen.tickers.length) ?? script.segments[0];
-    const view = viewFor(seg, packet, queueDir);
-    spec = { type: script.type, headline: seg.text, signal: view.signal, chart: view.chart, wick: { mood: seg.mood } };
-  } else {
-    // No script: a generic card from the packet (weekday packets carry no free picks).
-    const friday = new Date(`${date}T12:00:00Z`).getUTCDay() === 5;
-    spec = friday
-      ? { type: 'friday_teaser', headline: "Who survives tonight's close?", sub: 'Results Saturday, same format, every week.', wick: { mood: 'tense' } }
-      : { type: 'candidate_race', headline: 'Candidate race is on.', sub: 'Nothing counts until the weekly close.', wick: { mood: 'tense' } };
-  }
-  spec.wick = { ...spec.wick, flameSize: flameSizeFor(count), up };
-  const out = join(queueDir, 'image.png');
-  mkdirSync(queueDir, { recursive: true });
-  writeFileSync(out, svgToPng(stillImage(spec)));
+  const { errors, warnings, card } = resolveCard(raw, packetPath ? loadPacket(packetPath) : null, queueDir);
+  if (errors.length) throw new RenderError(errors, warnings);
+  const out = join(queueDir, 'card.png');
+  writeFileSync(out, svgToPng(renderCardSvg(card, { style, size: wide ? 'wide' : 'portrait', handle: CFG.handle })));
   rmSync(join(queueDir, 'error.md'), { force: true });
+  for (const w of warnings) console.warn(`warning: ${w}`);
   console.log(`done: ${out}`);
 }
 
 const opts = args();
 try {
-  if (opts.image) renderImage(opts);
+  if (opts.card) renderCard(opts);
   else await renderVideo(opts);
 } catch (err) {
   writeError(opts.queueDir, opts.date, err);

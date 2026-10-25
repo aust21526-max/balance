@@ -1,0 +1,10 @@
+{
+  "template": "verdict",
+  "title": "This week's verdict is in",
+  "subtitle": "Free sample below. Full list for members.",
+  "mood": "excited",
+  "items": [
+    { "symbol": "DEMO", "about": true },
+    { "symbol": "OLDV" }
+  ]
+}

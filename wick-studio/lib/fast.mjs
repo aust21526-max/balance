@@ -159,13 +159,21 @@ function countScene(L, seg, lt, wick, count) {
   return s;
 }
 
-function heroScene(L, seg, lt, wick, chunk, t) {
+// Opening shot. On the Saturday verdict the conclusion (pass count) lands in the first
+// second as a big banner, because most X viewers watch muted.
+function heroScene(L, seg, lt, wick, chunk, t, st) {
   const pop = spring(lt, { stiffness: 200, damping: 12 });
+  let banner = '';
+  if (st.type === 'weekly_confirm' && st.count > 0) {
+    const by = L.land ? 230 : 330;
+    banner = slamText(L.W / 2, by, `${st.count} QUALIFIED`, L.land ? 150 : 140, lt - 0.05, HL)
+      + `<text x="${L.W / 2}" y="${by + 70}" font-family="Inter" font-size="44" font-weight="800" fill="${COLORS.text}" text-anchor="middle" fill-opacity="${clamp((lt - 0.3) / 0.2).toFixed(2)}">at this week's close</text>`;
+  }
   const x = L.land ? L.hero.x : L.W / 2;
   let s = wickAt(x, L.hero.y + (1 - pop) * 400, L.hero.s * lerp(0.7, 1, pop), wick);
-  const cap = L.land ? { x: L.W / 2 + 280, y: L.bigCap.y, size: L.bigCap.size, max: L.bigCap.max } : { x: L.W / 2, y: L.bigCap.y - 200, size: L.bigCap.size, max: L.bigCap.max };
+  const cap = L.land ? { x: L.W / 2 + 280, y: L.bigCap.y + 120, size: 96, max: L.bigCap.max } : { x: L.W / 2, y: L.bigCap.y - 120, size: 96, max: L.bigCap.max };
   s += caption(chunk, cap, t);
-  return s;
+  return banner + s;
 }
 
 function lineScene(L, seg, lt, wick, chunk, t) {
@@ -241,7 +249,7 @@ export function fastFrame(L, st) {
   const punch = lerp(1.07, 1, easeOutCubic(lt / 0.25));
   let body;
   switch (seg.kind) {
-    case 'hero': body = heroScene(L, seg, lt, st.wick, st.chunk, t); break;
+    case 'hero': body = heroScene(L, seg, lt, st.wick, st.chunk, t, st); break;
     case 'chart': body = chartScene(L, seg, lt, st.wick); break;
     case 'earnings': body = earningsScene(L, seg, lt, st.wick); break;
     case 'about': body = aboutScene(L, seg, lt, st.wick, t); break;

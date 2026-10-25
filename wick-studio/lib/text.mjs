@@ -15,8 +15,3 @@ export function wrap(text, fontSize, maxWidth, ratio = 0.56) {
 }
 
 export const textWidth = (s, fontSize, ratio = 0.6) => String(s).length * fontSize * ratio;
-
-export function textBlock(lines, { x, y, size, lineHeight = 1.2, color, weight = 700, anchor = 'start' }) {
-  return lines.map((l, i) =>
-    `<text x="${x}" y="${(y + i * size * lineHeight).toFixed(1)}" font-family="Inter" font-size="${size}" font-weight="${weight}" fill="${color}" text-anchor="${anchor}">${esc(l)}</text>`).join('');
-}

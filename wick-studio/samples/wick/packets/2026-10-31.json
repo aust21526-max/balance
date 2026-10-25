@@ -56,6 +56,22 @@
       "earnings_date": null,
       "content_angle": "sample",
       "publish": "subscriber list"
+    },
+    {
+      "symbol": "OLDV",
+      "company": "Old Vanish Inc (sample)",
+      "type": "TB",
+      "status": "CANDIDATE",
+      "weekly_close": 0,
+      "tags": [
+        "sample"
+      ],
+      "publish_eligible": true,
+      "publish_rank": null,
+      "earnings_caution": false,
+      "earnings_date": null,
+      "content_angle": "sample",
+      "publish": "free post: vanished log"
     }
   ],
   "free_picks": [

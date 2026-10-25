@@ -1,0 +1,40 @@
+{
+  "_sample": "SAMPLE DATA for render tests only \u2014 tickers are not real",
+  "packet_type": "monday_confirm",
+  "date": "2026-11-02",
+  "summary": {
+    "candidates": 0,
+    "qualified": 3,
+    "market_week": "up"
+  },
+  "signals": [],
+  "free_picks": [],
+  "monday": {
+    "new_closes": [
+      {
+        "symbol": "SAMPB",
+        "company": "Sample B",
+        "exit_kind": "tp1_partial",
+        "vs_spy_pct": 2.1
+      },
+      {
+        "symbol": "SAMPC",
+        "company": "Sample C",
+        "exit_kind": "chandelier_trail",
+        "vs_spy_pct": -0.8
+      },
+      {
+        "symbol": "SAMPD",
+        "company": "Sample D",
+        "exit_kind": "sl",
+        "vs_spy_pct": -3.4
+      }
+    ]
+  },
+  "monthly_scorecard": {
+    "wins": 5,
+    "losses": 3,
+    "beat_spy": 4
+  },
+  "notes": []
+}
