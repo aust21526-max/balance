@@ -15,7 +15,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { blinkAt } from './characters/rig.mjs';
 import { frameEnvelope, readWav, synthesize, writeWav } from './lib/audio.mjs';
-import { findPacket, flameSizeFor, loadPacket, qualifiedCount, signalFor, weekDirection } from './lib/packet.mjs';
+import { findPacket, flameSizeFor, loadPacket, packetTypeFor, qualifiedCount, signalFor, weekDirection } from './lib/packet.mjs';
 import { rasterInOrder } from './lib/pool.mjs';
 import { svgToPng } from './lib/raster.mjs';
 import { chunkAt, chunkWords, fastFrame, layout, sceneKind } from './lib/fast.mjs';
@@ -155,7 +155,7 @@ async function renderVideo({ date, wickDir, queueDir, wide }) {
   const scriptPath = join(queueDir, 'script.md');
   if (!existsSync(scriptPath)) throw new RenderError([`script.md not found at ${scriptPath}`]);
   const script = parseScript(readFileSync(scriptPath, 'utf8'));
-  const packetPath = findPacket(wickDir, date);
+  const packetPath = findPacket(wickDir, date, packetTypeFor({ scriptType: script.type }));
   const packet = packetPath ? loadPacket(packetPath) : null;
   const { errors, warnings } = validate({ script, packet, queueDir });
   if (errors.length) throw new RenderError(errors, warnings);
@@ -240,7 +240,7 @@ function renderCard({ date, wickDir, queueDir, wide, style }) {
   let raw;
   try { raw = JSON.parse(readFileSync(cardPath, 'utf8')); } catch (e) { throw new RenderError([`card.json is not valid JSON: ${e.message}`]); }
   if (!['A', 'B'].includes(style)) throw new RenderError([`--style must be A or B (got "${style}")`]);
-  const packetPath = findPacket(wickDir, date);
+  const packetPath = findPacket(wickDir, date, packetTypeFor({ template: raw.template }));
   const { errors, warnings, card } = resolveCard(raw, packetPath ? loadPacket(packetPath) : null, queueDir);
   if (errors.length) throw new RenderError(errors, warnings);
   const out = join(queueDir, 'card.png');
@@ -251,6 +251,9 @@ function renderCard({ date, wickDir, queueDir, wide, style }) {
 }
 
 const mtime = (p) => (existsSync(p) ? statSync(p).mtimeMs : 0);
+// Just enough of card.json / script.md to pick the packet; full checks happen at render.
+const peekCard = (p) => { try { return JSON.parse(readFileSync(p, 'utf8')).template; } catch { return null; } };
+const peekScript = (p) => readFileSync(p, 'utf8').match(/^\s*type\s*:\s*(\S+)/m)?.[1] ?? null;
 
 // Renders every queue/<date>/ from the last `days` days whose card.json or script.md is
 // newer than its output (or has no output yet). A date whose error.md is newer than all of
@@ -262,7 +265,6 @@ async function renderPending({ wickDir, days }) {
   let failures = 0, done = 0;
   for (const date of readdirSync(queue).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && d >= since).sort()) {
     const queueDir = join(queue, date);
-    const packet = findPacket(wickDir, date);
     const charts = join(queueDir, 'charts');
     const chartTime = existsSync(charts) ? Math.max(0, ...readdirSync(charts).map((f) => mtime(join(charts, f)))) : 0;
     const jobs = [
@@ -271,6 +273,7 @@ async function renderPending({ wickDir, days }) {
     ];
     for (const job of jobs) {
       if (!existsSync(job.input)) continue;
+      const packet = findPacket(wickDir, date, packetTypeFor(job.kind === 'card' ? { template: peekCard(job.input) } : { scriptType: peekScript(job.input) }));
       const newestInput = Math.max(mtime(job.input), packet ? mtime(packet) : 0, job.extra);
       if (mtime(job.output) >= newestInput) continue; // up to date
       if (mtime(join(queueDir, 'error.md')) >= newestInput) continue; // already failed on these inputs

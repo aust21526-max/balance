@@ -3,13 +3,30 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-// The packet for a queue date is the newest packets/<YYYY-MM-DD>.json on or before it
-// (a Sunday video uses Saturday's weekly_verdict).
-export function findPacket(wickDir, date) {
+// The packet for a queue date is the newest packets/<YYYY-MM-DD>.json on or before it.
+// With `type`, the newest packet of that packet_type from the 7 days up to the date wins
+// instead: a Sunday or Monday verdict card needs Saturday's weekly_verdict (only it has
+// free_picks), even though a daily or monday_confirm packet has arrived since.
+export function findPacket(wickDir, date, type = null) {
   const dir = join(wickDir, 'packets');
   if (!existsSync(dir)) return null;
-  const files = readdirSync(dir).filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f) && f.slice(0, 10) <= date).sort();
-  return files.length ? join(dir, files[files.length - 1]) : null;
+  const files = readdirSync(dir).filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f) && f.slice(0, 10) <= date).sort().reverse();
+  if (type) {
+    const weekAgo = new Date(Date.parse(`${date}T00:00:00Z`) - 7 * 86400e3).toISOString().slice(0, 10);
+    for (const f of files.filter((f) => f.slice(0, 10) >= weekAgo)) {
+      try {
+        if (JSON.parse(readFileSync(join(dir, f), 'utf8')).packet_type === type) return join(dir, f);
+      } catch { /* unreadable packets are reported when loaded */ }
+    }
+  }
+  return files.length ? join(dir, files[0]) : null;
+}
+
+// Which packet_type a card template or script type is built from (null = newest packet).
+export function packetTypeFor({ template, scriptType }) {
+  if (template === 'verdict' || scriptType === 'weekly_confirm' || scriptType === 'deep_dive') return 'weekly_verdict';
+  if (template === 'results' || scriptType === 'results') return 'monday_confirm';
+  return null;
 }
 
 // Real packets name stocks with their exchange ("NYSE:EFC") while free_picks and scripts

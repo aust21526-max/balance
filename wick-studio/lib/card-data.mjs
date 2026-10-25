@@ -5,7 +5,7 @@
 //   "title": "≤ 6 words",
 //   "subtitle": "≤ 12 words",            optional
 //   "mood": "excited" | "calm" | "tense" | "gloomy" | "apology",   optional
-//   "items": [{ "symbol": "NVDA", "about": true }],   verdict/results only; race has none
+//   "items": [{ "symbol": "NVDA", "about": true }],   verdict/results only; race has none ("ticker" also accepted)
 //   "chart": "NVDA"                       optional, uses charts/NVDA.png (verdict only)
 // }
 //
@@ -78,7 +78,7 @@ export function resolveCard(card, packet, queueDir) {
     out.stats.qualified = qualifiedCount(packet);
     const allowed = publicSymbols(packet);
     for (const it of items) {
-      const sym = String(it.symbol ?? '').toUpperCase();
+      const sym = String(it.symbol ?? it.ticker ?? '').toUpperCase();
       const sig = signalFor(packet, sym);
       if (!sig) { errors.push(`items: ${sym} is not in packet.signals`); continue; }
       if (!allowed.has(sym)) { errors.push(`items: ${sym} is not a free pick or vanished log (publish: "${sig.publish ?? '-'}")`); continue; }
@@ -102,8 +102,8 @@ export function resolveCard(card, packet, queueDir) {
 
   if (t === 'results') {
     const list = closes(packet);
-    if (!list.length) errors.push('results card needs packet.monday.new_closes');
-    const pick = items.length ? items.map((i) => String(i.symbol).toUpperCase()) : list.map((c) => String(c.symbol).toUpperCase());
+    if (!list.length) errors.push('results card: packet.monday.new_closes is empty — no signal closed this week, so skip the results card (post the text only)');
+    const pick = items.length ? items.map((i) => String(i.symbol ?? i.ticker).toUpperCase()) : list.map((c) => String(c.symbol).toUpperCase());
     for (const sym of pick) {
       const c = list.find((x) => String(x.symbol).toUpperCase() === sym);
       if (!c) { errors.push(`items: ${sym} is not in packet.monday.new_closes`); continue; }

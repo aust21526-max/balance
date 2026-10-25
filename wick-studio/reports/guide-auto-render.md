@@ -19,6 +19,10 @@
 - 기록: `wick-studio/out/pending.log`
 - 영상은 렌더에 1~2분 걸리고 PC가 켜져 있어야 합니다. 토요일 17:30~18:00에는 PC를 켜 두세요.
 
+## 코드 업데이트
+
+클로드코드가 렌더 코드를 고쳤다고 하면 `wick-studio/scripts/windows/update.cmd`를 더블클릭합니다. 최신 코드를 받아 오고, 자동 렌더는 다음 실행부터 새 코드로 돕니다.
+
 ## 끄기
 
 명령 프롬프트에서 `schtasks /Delete /TN "WeeklyWick Render" /F`
