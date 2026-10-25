@@ -84,7 +84,11 @@ function frame(style, L, card, handle) {
   tl = tl.slice(0, 2);
   tl.forEach((line, i) => { s += `<text x="${L.pad}" y="${L.titleY + i * ts * 1.05}" font-family="Inter" font-size="${ts}" font-weight="900" fill="${S.fg}">${esc(line)}</text>`; });
   const subY = L.titleY + (tl.length - 1) * ts * 1.05 + L.subSize * 1.6;
-  if (card.subtitle) s += `<text x="${L.pad}" y="${subY}" font-family="Inter" font-size="${L.subSize}" font-weight="600" fill="${S.muted}">${esc(card.subtitle)}</text>`;
+  if (card.subtitle) {
+    // Shrink a long subtitle to stay on one line (Inter SemiBold ≈ 0.53 em per character).
+    const subSize = Math.max(28, Math.min(L.subSize, L.titleMax / (card.subtitle.length * 0.53)));
+    s += `<text x="${L.pad}" y="${subY}" font-family="Inter" font-size="${subSize.toFixed(1)}" font-weight="600" fill="${S.muted}">${esc(card.subtitle)}</text>`;
+  }
   // Footer
   s += `<text x="${L.pad}" y="${L.footY}" font-family="Inter" font-size="22" font-weight="600" fill="${S.muted}">${DISCLAIMER}</text>`;
   s += `<text x="${L.W - L.pad}" y="${L.footY}" font-family="Inter" font-size="22" font-weight="800" fill="${S.muted}" text-anchor="end">${esc(handle)}</text>`;
