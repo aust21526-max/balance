@@ -24,6 +24,8 @@
 | `items` | verdict·results | 종목 코드만. verdict에서 `"about": true`면 패킷의 `company_blurb`를 함께 표시 |
 | `chart` | 아니오 | verdict 전용. `items` 중 하나이고 `charts/<TICKER>.png`(TradingView 스냅샷)가 있어야 함 |
 
+상단 배지는 템플릿으로 정해집니다: verdict = CONFIRMED, results = **GRADED · Exit report** (2026-10-25 명재 결정), race = LIVE.
+
 **도장은 card.json에 쓰지 않습니다.** 렌더러가 패킷에서 직접 정합니다.
 - verdict: `free_picks` → QUALIFIED, `publish: "free post: vanished log"` → VANISHED, `earnings_caution: true` → EARNINGS WEEK. 통과 종목 수도 패킷에서 셉니다.
 - results: `monday.new_closes`의 `exit_kind` → TAKE-PROFIT / STOPPED OUT / TRAILING EXIT, `vs_spy_pct` 부호 → BEAT SPY / TRAILED SPY (%는 표시하지 않음). `items`를 생략하면 그 주 청산 전체. `monthly_scorecard`가 있으면 "MONTH SO FAR" 박스.

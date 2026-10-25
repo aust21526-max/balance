@@ -47,11 +47,14 @@ function stamp(style, label, x, y, size, rot = -7) {
     </g></g>` };
 }
 
+// Top badge: CONFIRMED on the Saturday verdict, GRADED on Monday's exit report
+// (closed trades, nothing left to confirm), LIVE on weekday cards.
 function statusPill(style, type, x, y) {
-  const live = type !== 'weekly_confirm';
-  const label = live ? 'LIVE · Confirms at Friday close' : 'CONFIRMED · Weekly close';
+  const kind = type === 'weekly_confirm' ? 'confirmed' : type === 'results' ? 'graded' : 'live';
+  const label = { confirmed: 'CONFIRMED · Weekly close', graded: 'GRADED · Exit report', live: 'LIVE · Confirms at Friday close' }[kind];
+  const bg = { confirmed: '#22c47a', graded: '#7fb2ff', live: '#ffb020' }[kind];
+  const live = kind === 'live';
   const size = 24, padX = 18, h = 44, w = textWidth(label, size, 0.62) + padX * 2 + (live ? 22 : 0);
-  const bg = live ? '#ffb020' : '#22c47a';
   return `<g><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}" fill="${bg}"/>
     ${live ? `<circle cx="${x + padX + 6}" cy="${y + h / 2}" r="7" fill="#e5383b"/>` : ''}
     <text x="${x + padX + (live ? 22 : 0)}" y="${y + h / 2 + 9}" font-family="Inter" font-size="${size}" font-weight="800" fill="#10141f">${label}</text></g>`;
