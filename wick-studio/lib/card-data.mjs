@@ -28,6 +28,8 @@ const words = (s) => String(s ?? '').trim().split(/\s+/).filter(Boolean).length;
 // Normalises the many ways exit_kind may be spelled in the ledger.
 export function exitStamp(kind) {
   const k = String(kind ?? '').toLowerCase();
+  // A partial take-profit sells half at the first target; the rest is still open, so it is not a win yet.
+  if (/partial/.test(k)) return 'FIRST TARGET';
   if (/tp|take|profit/.test(k)) return 'TAKE-PROFIT';
   if (/sl|stop/.test(k) && !/trail/.test(k)) return 'STOPPED OUT';
   if (/trail|chand/.test(k)) return 'TRAILING EXIT';
@@ -73,7 +75,8 @@ export function trackedPicks(history) {
         if (!pick || (pick.signalWeek && c.signal_week && pick.signalWeek !== c.signal_week)) continue;
         const v = Number(c.vs_spy_pct);
         pick.stamp = exitStamp(c.exit_kind) ?? pick.stamp;
-        pick.vsSpy = Number.isFinite(v) ? (v >= 0 ? 'BEAT SPY' : 'TRAILED SPY') : null;
+        // vs SPY is only final once the whole position has closed.
+        pick.vsSpy = pick.stamp !== 'FIRST TARGET' && Number.isFinite(v) ? (v >= 0 ? 'BEAT SPY' : 'TRAILED SPY') : null;
       }
     }
   }
@@ -164,12 +167,14 @@ export function resolveCard(card, packet, queueDir, history = []) {
       const stamp = exitStamp(c.exit_kind);
       if (!stamp) errors.push(`items: ${sym} has unknown exit_kind "${c.exit_kind}"`);
       const v = Number(c.vs_spy_pct);
-      out.rows.push({ symbol: sym, company: signalFor(packet, sym)?.company ?? c.company, stamp, vsSpy: Number.isFinite(v) ? (v >= 0 ? 'BEAT SPY' : 'TRAILED SPY') : null });
+      const final = stamp !== 'FIRST TARGET';
+      out.rows.push({ symbol: sym, company: signalFor(packet, sym)?.company ?? c.company, stamp, vsSpy: final && Number.isFinite(v) ? (v >= 0 ? 'BEAT SPY' : 'TRAILED SPY') : null });
     }
     const sc = packet.monthly_scorecard;
     if (sc) out.stats.scorecard = { wins: sc.wins, losses: sc.losses, beatSpy: sc.beat_spy ?? sc.beat_spy_count };
-    const losses = out.rows.filter((r) => r.stamp === 'STOPPED OUT').length;
-    if (!card.mood && losses > out.rows.length - losses) out.mood = 'apology';
+    const finals = out.rows.filter((r) => r.stamp !== 'FIRST TARGET');
+    const losses = finals.filter((r) => r.stamp === 'STOPPED OUT').length;
+    if (!card.mood && losses > finals.length - losses) out.mood = 'apology';
   }
 
   if (t === 'track') {

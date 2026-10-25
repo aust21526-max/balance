@@ -29,8 +29,8 @@
 
 **도장은 card.json에 쓰지 않습니다.** 렌더러가 패킷에서 직접 정합니다.
 - verdict: `free_picks` → QUALIFIED, `publish: "free post: vanished log"` → VANISHED, `earnings_caution: true` → EARNINGS WEEK. 통과 종목 수도 패킷에서 셉니다.
-- results: `monday.new_closes`의 `exit_kind` → TAKE-PROFIT / STOPPED OUT / TRAILING EXIT, `vs_spy_pct` 부호 → BEAT SPY / TRAILED SPY (%는 표시하지 않음). `items`를 생략하면 그 주 청산 전체. `monthly_scorecard`가 있으면 "MONTH SO FAR" 박스.
-- track: 최근 8주 토요일 패킷의 `free_picks`를 모으고, 그 뒤 월요일 패킷의 `monday.new_closes`·`monday.vanished`로 최신 상태를 찍습니다 → STILL OPEN / TAKE-PROFIT / STOPPED OUT / TRAILING EXIT / VANISHED, 청산된 종목은 BEAT SPY / TRAILED SPY (%는 표시하지 않음). 이미 무료로 공개한 종목이라 이름을 씁니다.
+- results: `monday.new_closes`의 `exit_kind` → FIRST TARGET(부분 익절, 나머지 보유 중) / STOPPED OUT / TRAILING EXIT, `vs_spy_pct` 부호 → BEAT SPY / TRAILED SPY (%는 표시하지 않음, FIRST TARGET은 아직 최종 결과가 아니라 SPY 비교를 찍지 않음). `items`를 생략하면 그 주 청산 전체. `monthly_scorecard`가 있으면 "MONTH SO FAR" 박스.
+- track: 최근 8주 토요일 패킷의 `free_picks`를 모으고, 그 뒤 월요일 패킷의 `monday.new_closes`·`monday.vanished`로 최신 상태를 찍습니다 → STILL OPEN / FIRST TARGET(첫 목표 도달, 나머지 보유 중) / STOPPED OUT / TRAILING EXIT / VANISHED, 완전히 청산된 종목만 BEAT SPY / TRAILED SPY (%는 표시하지 않음). 이미 무료로 공개한 종목이라 이름을 씁니다.
 - race: 후보 수(`summary.candidates`)와 태그 상위 3개를 패킷에서 계산. **`items` 금지, 종목명 금지.**
 - anatomy: 실제 데이터 없이 그린 도식(주봉 캔들과 하단 밴드). 패킷이 필요 없고, **종목명·숫자·`items`·`chart` 금지.** 예: `{"template": "anatomy", "title": "How a signal survives", "subtitle": "Weekly close or it didn't happen."}`
 

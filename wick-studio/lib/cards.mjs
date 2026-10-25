@@ -16,8 +16,8 @@ const STYLES = {
   B: { name: "Judges' sheet", bg: '#f3ede1', fg: '#1b1f2a', muted: '#6b6457', panel: '#e9e0cd', rule: '#ddd2bd', band: '#1b1f2a', bandFg: '#f3ede1', ink: true },
 };
 const STAMP_COLORS = {
-  A: { QUALIFIED: '#22c47a', VANISHED: '#8a93a6', 'EARNINGS WEEK': '#ff6a3d', 'TAKE-PROFIT': '#22c47a', 'STOPPED OUT': '#ef5350', 'TRAILING EXIT': '#4c8dff', CANDIDATES: '#ffb020', 'BEAT SPY': '#22c47a', 'TRAILED SPY': '#ef5350', 'STILL OPEN': '#ffb020' },
-  B: { QUALIFIED: '#1f8a54', VANISHED: '#6b6457', 'EARNINGS WEEK': '#d9631e', 'TAKE-PROFIT': '#1f8a54', 'STOPPED OUT': '#c0392b', 'TRAILING EXIT': '#2763c4', CANDIDATES: '#b7791f', 'BEAT SPY': '#1f8a54', 'TRAILED SPY': '#c0392b', 'STILL OPEN': '#b7791f' },
+  A: { QUALIFIED: '#22c47a', VANISHED: '#8a93a6', 'EARNINGS WEEK': '#ff6a3d', 'TAKE-PROFIT': '#22c47a', 'FIRST TARGET': '#2bb3a3', 'STOPPED OUT': '#ef5350', 'TRAILING EXIT': '#4c8dff', CANDIDATES: '#ffb020', 'BEAT SPY': '#22c47a', 'TRAILED SPY': '#ef5350', 'STILL OPEN': '#ffb020' },
+  B: { QUALIFIED: '#1f8a54', VANISHED: '#6b6457', 'EARNINGS WEEK': '#d9631e', 'TAKE-PROFIT': '#1f8a54', 'FIRST TARGET': '#1f7f74', 'STOPPED OUT': '#c0392b', 'TRAILING EXIT': '#2763c4', CANDIDATES: '#b7791f', 'BEAT SPY': '#1f8a54', 'TRAILED SPY': '#c0392b', 'STILL OPEN': '#b7791f' },
 };
 const STAMP_COL = 330; // right-hand column that holds a row's stamps
 const HEADER = { verdict: 'WEEKLY VERDICT', results: 'EXIT REPORT', race: 'CANDIDATE RACE', track: 'PICK TRACKER', anatomy: 'SIGNAL ANATOMY' };
