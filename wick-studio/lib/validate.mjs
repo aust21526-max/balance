@@ -60,8 +60,9 @@ export function validate({ script, packet, queueDir }) {
         warnings.push(`${where}: ${sym} is QUALIFIED but type is ${script.type}`);
       }
       if (sig.earnings_caution === true) earningsTickers.add(sym);
+      // A late snapshot should not block the video: render without it, re-render when it lands.
       if (seg.onScreen.chart && !existsSync(chartPath(queueDir, sym))) {
-        errors.push(`${where}: chart snapshot missing — put the TradingView snapshot at charts/${sym}.png`);
+        warnings.push(`${where}: no charts/${sym}.png yet — shown without the chart; the video re-renders when the snapshot is added`);
       }
     }
     if (seg.onScreen.chart && !seg.onScreen.tickers.length) errors.push(`${where}: chart requested without a ticker`);

@@ -67,7 +67,7 @@ function viewFor(seg, packet, queueDir) {
   const signal = sym ? signalFor(packet, sym) : null;
   return {
     signal,
-    chart: sym && seg.onScreen.chart ? chartPath(queueDir, sym) : null,
+    chart: sym && seg.onScreen.chart && existsSync(chartPath(queueDir, sym)) ? chartPath(queueDir, sym) : null,
     other: seg.onScreen.other,
   };
 }
@@ -281,7 +281,7 @@ async function renderPending({ wickDir, days }) {
     const charts = join(queueDir, 'charts');
     const chartTime = existsSync(charts) ? Math.max(0, ...readdirSync(charts).map((f) => mtime(join(charts, f)))) : 0;
     const jobs = [
-      { kind: 'card', input: join(queueDir, 'card.json'), output: join(queueDir, 'card.png'), extra: 0 },
+      { kind: 'card', input: join(queueDir, 'card.json'), output: join(queueDir, 'card.png'), extra: chartTime },
       { kind: 'video', input: join(queueDir, 'script.md'), output: join(queueDir, 'render.mp4'), extra: chartTime },
     ];
     for (const job of jobs) {

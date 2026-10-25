@@ -8,6 +8,8 @@
 //   "items": [{ "symbol": "NVDA", "about": true }],   verdict/results only; race has none ("ticker" also accepted)
 //   "chart": "NVDA"                       optional, uses charts/NVDA.png (verdict only)
 // }
+// "anatomy" is a drawn schematic of how a signal is confirmed or vanishes (no market data):
+//   { "template": "anatomy", "title": "…", "variant": "both" | "qualified" | "vanished" }
 // "track" (Tuesday) follows up past free picks: items optional, default = every free pick
 // of the last 8 weeks; each row shows its latest grade from later monday_confirm packets.
 //
@@ -18,7 +20,7 @@ import { packetNumbers, publicSymbols, qualifiedCount, signalFor, signals, weekD
 import { MOODS } from './script.mjs';
 import { chartPath } from './validate.mjs';
 
-export const TEMPLATES = ['verdict', 'results', 'race', 'track'];
+export const TEMPLATES = ['verdict', 'results', 'race', 'track', 'anatomy'];
 const BANNED = /\b(scores?|scored|ranked|ranking|rank|top pick|number one|highest|best|guarantee[sd]?|sure thing|must buy|buy now|buy|sell)\b|#\s?1\b/i;
 const PRICE_OR_PCT = /%|\bpercent\b|\$\s?\d|\d+(\.\d+)?\s?(usd|dollars?)\b/i;
 const words = (s) => String(s ?? '').trim().split(/\s+/).filter(Boolean).length;
@@ -78,6 +80,25 @@ export function trackedPicks(history) {
   return [...picks.values()];
 }
 
+// The anatomy card is an illustration: no tickers, no numbers, no packet needed.
+function resolveAnatomy(card, errors, warnings) {
+  const variant = card.variant ?? 'both';
+  if (!['both', 'qualified', 'vanished'].includes(variant)) errors.push(`card.json: variant must be both, qualified or vanished (got "${variant}")`);
+  for (const [field, text] of [['title', card.title], ['subtitle', card.subtitle]]) {
+    if (!text) continue;
+    const bad = text.match(BANNED);
+    if (bad) errors.push(`card.json ${field}: "${bad[0]}" — scores, rankings and advice wording are not allowed`);
+    if (/\d/.test(text)) errors.push(`card.json ${field}: the anatomy card is an illustration — no numbers`);
+    if (/\$[A-Z]/.test(text)) errors.push(`card.json ${field}: the anatomy card names no stocks`);
+  }
+  if (Array.isArray(card.items) && card.items.length) errors.push('anatomy card must not name stocks — remove items');
+  if (card.chart) errors.push('anatomy card is a drawing — remove chart');
+  return { errors, warnings, card: {
+    template: 'anatomy', type: 'anatomy', title: card.title, subtitle: card.subtitle ?? '', variant,
+    mood: card.mood ?? 'calm', flameSize: 0.75, up: true, rows: [], chart: null, stats: {},
+  } };
+}
+
 export function resolveCard(card, packet, queueDir, history = []) {
   const errors = [], warnings = [];
   const t = card.template;
@@ -86,6 +107,7 @@ export function resolveCard(card, packet, queueDir, history = []) {
   if (words(card.title) > 6) errors.push(`card.json: title is ${words(card.title)} words (max 6)`);
   if (words(card.subtitle) > 12) errors.push(`card.json: subtitle is ${words(card.subtitle)} words (max 12)`);
   if (card.mood && !MOODS.includes(card.mood)) errors.push(`card.json: unknown mood "${card.mood}"`);
+  if (t === 'anatomy') return resolveAnatomy(card, errors, warnings);
   if (!packet) { errors.push('packet: no packets/<YYYY-MM-DD>.json on or before this date'); return { errors, warnings }; }
 
   const numbers = packetNumbers(packet);
@@ -127,7 +149,7 @@ export function resolveCard(card, packet, queueDir, history = []) {
     if (card.chart) {
       const sym = String(card.chart).toUpperCase();
       if (!out.rows.some((r) => r.symbol === sym)) errors.push(`chart: ${sym} must also be one of the card items`);
-      else if (!existsSync(chartPath(queueDir, sym))) errors.push(`chart: put the TradingView snapshot at charts/${sym}.png`);
+      else if (!existsSync(chartPath(queueDir, sym))) warnings.push(`chart: no charts/${sym}.png yet — card made without it; it re-renders when the snapshot is added`);
       else out.chart = chartPath(queueDir, sym);
     }
   }

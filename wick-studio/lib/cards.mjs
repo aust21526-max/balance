@@ -1,4 +1,4 @@
-// Image cards (handoff §3): verdict / results / race / track in two style sets.
+// Image cards (handoff §3): verdict / results / race / track / anatomy in two style sets.
 //   A "Scoreboard": dark navy, filled stamps — matches the video.
 //   B "Judges' sheet": cream ruled paper, worn ink stamps — stands out in a dark feed.
 // Layout, margins and Wick's spot are fixed per size so the account is recognisable;
@@ -20,7 +20,7 @@ const STAMP_COLORS = {
   B: { QUALIFIED: '#1f8a54', VANISHED: '#6b6457', 'EARNINGS WEEK': '#d9631e', 'TAKE-PROFIT': '#1f8a54', 'STOPPED OUT': '#c0392b', 'TRAILING EXIT': '#2763c4', CANDIDATES: '#b7791f', 'BEAT SPY': '#1f8a54', 'TRAILED SPY': '#c0392b', 'STILL OPEN': '#b7791f' },
 };
 const STAMP_COL = 330; // right-hand column that holds a row's stamps
-const HEADER = { verdict: 'WEEKLY VERDICT', results: 'EXIT REPORT', race: 'CANDIDATE RACE', track: 'PICK TRACKER' };
+const HEADER = { verdict: 'WEEKLY VERDICT', results: 'EXIT REPORT', race: 'CANDIDATE RACE', track: 'PICK TRACKER', anatomy: 'SIGNAL ANATOMY' };
 
 let uid = 0;
 export function stamp(style, label, x, y, size, rot = -7) {
@@ -51,9 +51,9 @@ export function stamp(style, label, x, y, size, rot = -7) {
 // (closed trades, nothing left to confirm), TRACKED on Tuesday's free-pick follow-up,
 // LIVE on weekday race cards.
 function statusPill(style, type, x, y) {
-  const kind = type === 'weekly_confirm' ? 'confirmed' : type === 'results' ? 'graded' : type === 'track' ? 'tracked' : 'live';
-  const label = { confirmed: 'CONFIRMED · Weekly close', graded: 'GRADED · Exit report', tracked: 'TRACKED · Every free pick', live: 'LIVE · Confirms at Friday close' }[kind];
-  const bg = { confirmed: '#22c47a', graded: '#7fb2ff', tracked: '#7fb2ff', live: '#ffb020' }[kind];
+  const kind = type === 'weekly_confirm' ? 'confirmed' : type === 'results' ? 'graded' : type === 'track' ? 'tracked' : type === 'anatomy' ? 'explainer' : 'live';
+  const label = { confirmed: 'CONFIRMED · Weekly close', graded: 'GRADED · Exit report', tracked: 'TRACKED · Every free pick', explainer: 'HOW IT WORKS · Illustration', live: 'LIVE · Confirms at Friday close' }[kind];
+  const bg = { confirmed: '#22c47a', graded: '#7fb2ff', tracked: '#7fb2ff', explainer: '#d9d2c3', live: '#ffb020' }[kind];
   const live = kind === 'live';
   const size = 24, padX = 18, h = 44, w = textWidth(label, size, 0.62) + padX * 2 + (live ? 22 : 0);
   return `<g><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}" fill="${bg}"/>
@@ -216,12 +216,107 @@ function raceBody(style, L, card, y0) {
   return s;
 }
 
+// "Signal anatomy": a drawn schematic, not market data, so it carries no prices and no
+// licence questions. Two weekly-candle stories against the lower Bollinger band:
+// the close comes back above it (QUALIFIED) or fades below it again (VANISHED).
+const ANATOMY_CANDLES = [
+  { o: 0.78, c: 0.72, h: 0.82, l: 0.68 },
+  { o: 0.72, c: 0.62, h: 0.74, l: 0.58 },
+  { o: 0.62, c: 0.50, h: 0.64, l: 0.46 },
+  { o: 0.50, c: 0.30, h: 0.52, l: 0.26 },
+];
+const ANATOMY_LAST = { qualified: { o: 0.30, c: 0.44, h: 0.48, l: 0.27 }, vanished: { o: 0.30, c: 0.27, h: 0.47, l: 0.22 } };
+const ANATOMY_LOWER = [0.62, 0.56, 0.48, 0.38, 0.35];
+const ANATOMY_MID = [0.84, 0.81, 0.77, 0.72, 0.68];
+const ANATOMY_TEXT = {
+  qualified: { head: 'IF IT HOLDS', stamp: 'QUALIFIED', lines: ['A weekly close lands below the lower band.', 'The next Friday close is back above it.', 'Confirmed once, at the weekly close.'] },
+  vanished: { head: 'IF IT FADES', stamp: 'VANISHED', lines: ['Mid-week it pops back above the band: LIVE.', 'The Friday close slips below again.', 'Logged as vanished, not hidden.'] },
+};
+
+function anatomyPanel(style, kind, x, y, w, h, stackedText) {
+  const S = STYLES[style];
+  const ink = STAMP_COLORS[style];
+  const up = ink.QUALIFIED, down = ink['STOPPED OUT'];
+  const T = ANATOMY_TEXT[kind];
+  let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="18" fill="${S.panel}" fill-opacity="${S.ink ? 0.55 : 1}"/>`;
+  s += `<text x="${x + 26}" y="${y + 42}" font-family="Inter" font-size="22" font-weight="800" fill="${S.muted}" letter-spacing="3">${T.head}</text>`;
+  // Chart box: left part of the panel (row layout) or its top part (stacked layout).
+  const cx = x + 26, cy = y + 64;
+  const cw = stackedText ? w - 52 : Math.min(460, w * 0.49);
+  const ch = stackedText ? Math.max(150, h * 0.36) : h - 110;
+  const py = (v) => cy + (1 - v) * ch;
+  const slot = cw / 5;
+  const px = (i) => cx + slot * (i + 0.5);
+  const pts = (arr) => arr.map((v, i) => `${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(' ');
+  s += `<polyline points="${pts(ANATOMY_MID)}" fill="none" stroke="${S.muted}" stroke-opacity="0.35" stroke-width="3"/>`;
+  s += `<polyline points="${pts(ANATOMY_LOWER)}" fill="none" stroke="${S.muted}" stroke-width="4" stroke-dasharray="12 9"/>`;
+  s += `<text x="${(px(0) - slot * 0.4).toFixed(1)}" y="${(py(ANATOMY_LOWER[0]) + 30).toFixed(1)}" font-family="Inter" font-size="18" font-weight="700" fill="${S.muted}">lower band</text>`;
+  const candles = [...ANATOMY_CANDLES, ANATOMY_LAST[kind]];
+  candles.forEach((k, i) => {
+    const col = k.c >= k.o ? up : down;
+    const bw = slot * 0.46, top = py(Math.max(k.o, k.c)), bot = py(Math.min(k.o, k.c));
+    s += `<line x1="${px(i).toFixed(1)}" y1="${py(k.h).toFixed(1)}" x2="${px(i).toFixed(1)}" y2="${py(k.l).toFixed(1)}" stroke="${col}" stroke-width="4"/>`;
+    s += `<rect x="${(px(i) - bw / 2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(4, bot - top).toFixed(1)}" rx="3" fill="${col}"/>`;
+  });
+  // Ring the two closes that decide it: below the band, then the next Friday close.
+  const ring = (i, v, color) => `<circle cx="${px(i).toFixed(1)}" cy="${py(v).toFixed(1)}" r="${(slot * 0.36).toFixed(1)}" fill="none" stroke="${color}" stroke-width="4"/>`;
+  s += ring(3, ANATOMY_CANDLES[3].c, S.muted);
+  s += ring(4, ANATOMY_LAST[kind].c, ink[T.stamp]);
+  if (kind === 'vanished') {
+    s += `<circle cx="${px(4).toFixed(1)}" cy="${py(ANATOMY_LAST.vanished.h).toFixed(1)}" r="8" fill="${ink.CANDIDATES}"/>`;
+    s += `<text x="${(px(4) - 14).toFixed(1)}" y="${(py(ANATOMY_LAST.vanished.h) - 16).toFixed(1)}" font-family="Inter" font-size="18" font-weight="800" fill="${ink.CANDIDATES}" text-anchor="end">mid-week</text>`;
+  }
+  s += `<text x="${px(4).toFixed(1)}" y="${(cy + ch + 26).toFixed(1)}" font-family="Inter" font-size="18" font-weight="800" fill="${S.muted}" text-anchor="middle">Fri close</text>`;
+  // Explanation and stamp: right of the chart (row) or under it (stacked).
+  const tx = stackedText ? x + 26 : cx + cw + 40, tw = stackedText ? w - 52 : x + w - 26 - tx;
+  // Stacked (wide card): the stamp sits in the panel's header row to leave room for text.
+  const fs = stackedText ? 22 : 25, lh = stackedText ? 29 : 33;
+  let ty;
+  if (stackedText) {
+    const st = stamp(style, T.stamp, 0, 0, 24, -6);
+    s += stamp(style, T.stamp, x + w - 26 - st.w / 2, y + 36, 24, -6).svg;
+    ty = cy + ch + 62;
+  } else {
+    const st = stamp(style, T.stamp, tx + 105, y + 100, 30, -6);
+    s += st.svg;
+    ty = y + 100 + st.h / 2 + 52;
+  }
+  T.lines.forEach((line, i) => {
+    for (const part of wrap(`${i + 1}. ${line}`, fs, tw, 0.56)) {
+      s += `<text x="${tx}" y="${ty}" font-family="Inter" font-size="${fs}" font-weight="${i === 2 ? 800 : 600}" fill="${i === 2 ? S.fg : S.muted}">${esc(part)}</text>`;
+      ty += lh;
+    }
+    ty += 6;
+  });
+  return s;
+}
+
+function anatomyBody(style, L, card, y0) {
+  const wide = L.W > L.H;
+  const kinds = card.variant === 'both' ? ['qualified', 'vanished'] : [card.variant];
+  // Portrait drops Wick (see renderCardSvg) so both panels get the full body height.
+  const bottom = L.footY - 44;
+  y0 -= wide ? 20 : 40;
+  const gap = 26;
+  let s = '';
+  if (wide && kinds.length === 2) {
+    const w = (L.bodyW - gap) / 2;
+    kinds.forEach((k, i) => { s += anatomyPanel(style, k, L.pad + i * (w + gap), y0, w, bottom - y0, true); });
+  } else {
+    const h = (bottom - y0 - gap * (kinds.length - 1)) / kinds.length;
+    kinds.forEach((k, i) => { s += anatomyPanel(style, k, L.pad, y0 + i * (h + gap), L.bodyW, h, false); });
+  }
+  return s;
+}
+
 export function renderCardSvg(card, { style = 'A', size = 'portrait', handle = '@Aistockpo' } = {}) {
   const L = layout(size);
   const f = frame(style, L, card, handle);
   // The tracker lists past free picks with their latest grade: the exit report's row layout.
-  const body = { verdict: verdictBody, results: resultsBody, race: raceBody, track: resultsBody }[card.template](style, L, card, f.bodyY);
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${L.W}" height="${L.H}" viewBox="0 0 ${L.W} ${L.H}">${f.svg}${body}${wick(L, card)}</svg>`;
+  const body = { verdict: verdictBody, results: resultsBody, race: raceBody, track: resultsBody, anatomy: anatomyBody }[card.template](style, L, card, f.bodyY);
+  // The portrait anatomy card is a full-height diagram; Wick would sit on its second panel.
+  const mascot = card.template === 'anatomy' && L.W < L.H ? '' : wick(L, card);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${L.W}" height="${L.H}" viewBox="0 0 ${L.W} ${L.H}">${f.svg}${body}${mascot}</svg>`;
 }
 
 export const STYLE_NAMES = Object.fromEntries(Object.entries(STYLES).map(([k, v]) => [k, v.name]));
