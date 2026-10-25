@@ -5,10 +5,12 @@
 //   node render.mjs <YYYY-MM-DD> --card          -> queue/<date>/card.png from card.json (1080x1350)
 //   node render.mjs <YYYY-MM-DD> --card --wide   -> card.png at 1600x900
 //   --style A|B overrides config.cards.style for a card
+//   node render.mjs --pending [days]             -> render every queue/<date> from the last N days (default 10)
+//                                                   whose card.json/script.md changed since its last output
 // Data folder: $WICK_DIR (the synced Google Drive "wick" folder), default ./samples/wick.
 // On failure the reason is written to queue/<date>/error.md and the exit code is 1.
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { blinkAt } from './characters/rig.mjs';
@@ -35,12 +37,14 @@ class RenderError extends Error {
 }
 
 function args() {
-  const [date, ...flags] = process.argv.slice(2);
+  const argv = process.argv.slice(2);
+  const wickDir = resolve(process.env.WICK_DIR || join(ROOT, 'samples', 'wick'));
+  if (argv[0] === '--pending') return { pending: true, wickDir, days: Number(argv[1] ?? 10) };
+  const [date, ...flags] = argv;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date ?? '')) {
-    console.error('usage: ./render.sh <YYYY-MM-DD> [--wide] [--card [--style A|B]]');
+    console.error('usage: ./render.sh <YYYY-MM-DD> [--wide] [--card [--style A|B]]\n       ./render.sh --pending [days]');
     process.exit(2);
   }
-  const wickDir = resolve(process.env.WICK_DIR || join(ROOT, 'samples', 'wick'));
   const styleAt = flags.indexOf('--style');
   return {
     date, wickDir, queueDir: join(wickDir, 'queue', date),
@@ -246,7 +250,48 @@ function renderCard({ date, wickDir, queueDir, wide, style }) {
   console.log(`done: ${out}`);
 }
 
+const mtime = (p) => (existsSync(p) ? statSync(p).mtimeMs : 0);
+
+// Renders every queue/<date>/ from the last `days` days whose card.json or script.md is
+// newer than its output (or has no output yet). A date whose error.md is newer than all of
+// its inputs is skipped, so a broken script is not re-rendered every run until Grok fixes it.
+async function renderPending({ wickDir, days }) {
+  const queue = join(wickDir, 'queue');
+  if (!existsSync(queue)) { console.log(`no queue folder at ${queue}`); return 0; }
+  const since = new Date(Date.now() + 9 * 3600e3 - days * 86400e3).toISOString().slice(0, 10); // KST
+  let failures = 0, done = 0;
+  for (const date of readdirSync(queue).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && d >= since).sort()) {
+    const queueDir = join(queue, date);
+    const packet = findPacket(wickDir, date);
+    const charts = join(queueDir, 'charts');
+    const chartTime = existsSync(charts) ? Math.max(0, ...readdirSync(charts).map((f) => mtime(join(charts, f)))) : 0;
+    const jobs = [
+      { kind: 'card', input: join(queueDir, 'card.json'), output: join(queueDir, 'card.png'), extra: 0 },
+      { kind: 'video', input: join(queueDir, 'script.md'), output: join(queueDir, 'render.mp4'), extra: chartTime },
+    ];
+    for (const job of jobs) {
+      if (!existsSync(job.input)) continue;
+      const newestInput = Math.max(mtime(job.input), packet ? mtime(packet) : 0, job.extra);
+      if (mtime(job.output) >= newestInput) continue; // up to date
+      if (mtime(join(queueDir, 'error.md')) >= newestInput) continue; // already failed on these inputs
+      const opts = { date, wickDir, queueDir, wide: false, style: CFG.cards.style };
+      console.log(`== ${date} ${job.kind}`);
+      try {
+        if (job.kind === 'card') renderCard(opts); else await renderVideo(opts);
+        done++;
+      } catch (err) {
+        failures++;
+        writeError(queueDir, date, err);
+        console.error(`render failed — see ${join(queueDir, 'error.md')}\n${err.message}`);
+      }
+    }
+  }
+  console.log(`pending: ${done} rendered, ${failures} failed`);
+  return failures;
+}
+
 const opts = args();
+if (opts.pending) process.exit((await renderPending(opts)) ? 1 : 0);
 try {
   if (opts.card) renderCard(opts);
   else await renderVideo(opts);

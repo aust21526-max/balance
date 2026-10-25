@@ -18,6 +18,7 @@ cd wick-studio
 ./render.sh 2026-10-31 --card --wide   # 카드 1600x900
 ./render.sh 2026-10-31                 # 토요일 영상 9:16: render.mp4, thumb.png, captions.srt
 ./render.sh 2026-10-31 --wide          # 영상 16:9
+./render.sh --pending                  # 최근 10일 중 card.json/script.md가 바뀐 날짜를 모두 렌더 (PC 자동 렌더용, reports/guide-auto-render.md)
 ```
 
 카드 입력은 `$WICK_DIR/queue/<날짜>/card.json`(형식: `reports/guide-card-json.md`), 영상 입력은 `script.md`입니다. 둘 다 그 날짜 이전 최신 `$WICK_DIR/packets/<날짜>.json`과 차트 스냅샷 `$WICK_DIR/queue/<날짜>/charts/<TICKER>.png`(TradingView에서 저장)를 씁니다. 점검에 실패하면 렌더하지 않고 `queue/<날짜>/error.md`에 이유를 씁니다. `WICK_DIR` 없이 실행하면 `samples/wick`의 샘플 데이터로 렌더합니다. 카드 스타일은 `config.json`의 `cards.style` — 기본 **B 판정표**(2026-10-25 명재 선택), A 스코어보드는 `--style A`. 하단 핸들은 `config.json`의 `handle`(@weeklywick). 카드·영상 하단 고지는 "Not financial advice"만 표시합니다. 수동 게시 중이라 "Automated account" 표기는 뺐습니다(2026-10-25 명재 결정, `reports/guide-labels.md`).
