@@ -9,7 +9,7 @@ import { dataUri } from './scene.mjs';
 import { esc, textWidth, wrap } from './text.mjs';
 
 export const SIZES = { portrait: { W: 1080, H: 1350 }, wide: { W: 1600, H: 900 } };
-const DISCLAIMER = 'Automated account · Not financial advice';
+const DISCLAIMER = 'Not financial advice'; // 'Automated account' dropped from cards (명재, 2026-10-25)
 
 const STYLES = {
   A: { name: 'Scoreboard', bg: '#10141f', fg: '#eef1f7', muted: '#9aa3b5', panel: '#1a2030', rule: '#2a3142', band: '#1a2030', bandFg: '#eef1f7', ink: false },
