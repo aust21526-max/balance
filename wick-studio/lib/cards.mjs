@@ -162,18 +162,26 @@ function verdictBody(style, L, card, y0) {
   return s;
 }
 
+// "+5.4%" / "−3.1%" and "+2.0pp vs SPY": result figures for free picks (see card-data.mjs).
+const signed = (v, unit) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}${unit}`;
+
 function resultsBody(style, L, card, y0) {
   const S = STYLES[style];
   const sc = card.stats.scorecard;
-  const C = columns(L, y0, sc ? 140 : 0);
+  // Portrait cards put the monthly averages on a second line, so the box grows when they are there.
+  const avgLine = sc && sc.avgRet != null ? `avg ${signed(sc.avgRet, '%')}${sc.avgExcess != null ? ` · ${signed(sc.avgExcess, 'pp')} vs SPY` : ''}` : null;
+  const C = columns(L, y0, sc ? (avgLine && L.W <= L.H ? 190 : 140) : 0);
   let s = '';
   if (sc) {
     const split = L.W > L.H;
-    s += `<rect x="${C.sx}" y="${C.sy}" width="${C.sw}" height="${split ? 200 : 110}" rx="18" fill="${S.panel}"/>
+    s += `<rect x="${C.sx}" y="${C.sy}" width="${C.sw}" height="${split ? (avgLine ? 260 : 200) : avgLine ? 160 : 110}" rx="18" fill="${S.panel}"/>
       <text x="${C.sx + 30}" y="${C.sy + 45}" font-family="Inter" font-size="24" font-weight="800" fill="${S.muted}" letter-spacing="3">MONTH SO FAR</text>`;
     const parts = [`${sc.wins} W · ${sc.losses} L`, sc.beatSpy != null ? `${sc.beatSpy} beat SPY` : null].filter(Boolean);
-    if (split) parts.forEach((p, i) => { s += `<text x="${C.sx + 30}" y="${C.sy + 105 + i * 60}" font-family="Inter" font-size="46" font-weight="900" fill="${S.fg}">${p}</text>`; });
-    else s += `<text x="${C.sx + 30}" y="${C.sy + 90}" font-family="Inter" font-size="40" font-weight="900" fill="${S.fg}">${parts.join(' · ')}</text>`;
+    if (split) [...parts, avgLine].filter(Boolean).forEach((p, i) => { s += `<text x="${C.sx + 30}" y="${C.sy + 105 + i * 60}" font-family="Inter" font-size="${i < 2 ? 46 : 34}" font-weight="900" fill="${S.fg}">${p}</text>`; });
+    else {
+      s += `<text x="${C.sx + 30}" y="${C.sy + 90}" font-family="Inter" font-size="40" font-weight="900" fill="${S.fg}">${parts.join(' · ')}</text>`;
+      if (avgLine) s += `<text x="${C.sx + 30}" y="${C.sy + 138}" font-family="Inter" font-size="32" font-weight="800" fill="${S.fg}">${avgLine}</text>`;
+    }
   }
   // Rows shrink to fit the space above the footer; past MAX_ROWS the rest is summarised.
   const MAX_ROWS = 8;
@@ -190,6 +198,11 @@ function resultsBody(style, L, card, y0) {
     const sx = C.rx + C.rw - STAMP_COL / 2;
     if (row.stamp) s += stamp(style, row.stamp, sx, y + 52 * k, 32 * Math.max(k, 0.8), -7).svg;
     if (row.vsSpy) s += stamp(style, row.vsSpy, sx, y + 114 * k, 22 * Math.max(k, 0.8), -3).svg;
+    if (row.resultPct != null) {
+      const fx = C.rx + C.rw - STAMP_COL - 24;
+      s += `<text x="${fx}" y="${y + 70 * k}" text-anchor="end" font-family="Inter" font-size="${(46 * Math.max(k, 0.8)).toFixed(0)}" font-weight="900" fill="${S.fg}">${signed(row.resultPct, '%')}</text>`;
+      if (row.vsSpyPct != null) s += `<text x="${fx}" y="${y + 108 * k}" text-anchor="end" font-family="Inter" font-size="26" font-weight="700" fill="${S.muted}">${signed(row.vsSpyPct, 'pp')} vs SPY</text>`;
+    }
     y += rowH;
   }
   if (extra) s += `<text x="${C.rx}" y="${y + 40}" font-family="Inter" font-size="32" font-weight="800" fill="${S.muted}">+${extra} more on the record</text>`;

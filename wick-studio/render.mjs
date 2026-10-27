@@ -241,7 +241,7 @@ function renderCard({ date, wickDir, queueDir, wide, style }) {
   try { raw = JSON.parse(readFileSync(cardPath, 'utf8')); } catch (e) { throw new RenderError([`card.json is not valid JSON: ${e.message}`]); }
   if (!['A', 'B'].includes(style)) throw new RenderError([`--style must be A or B (got "${style}")`]);
   const packetPath = findPacket(wickDir, date, packetTypeFor({ template: raw.template }));
-  const history = raw.template === 'track' ? recentPackets(wickDir, date, 56) : [];
+  const history = ['track', 'results'].includes(raw.template) ? recentPackets(wickDir, date, 56) : [];
   const { errors, warnings, card } = resolveCard(raw, packetPath ? loadPacket(packetPath) : null, queueDir, history);
   if (errors.length) throw new RenderError(errors, warnings);
   const out = join(queueDir, 'card.png');

@@ -27,6 +27,11 @@ const words = (s) => String(s ?? '').trim().split(/\s+/).filter(Boolean).length;
 
 const PARTIAL = new Set(['FIRST TARGET', 'SECOND TARGET']);
 
+// Result figures (guides/추가지침_성과공개.md): free picks only, and only once the whole position has
+// closed, wins and losses alike. Partial take-profits still hold an open part, so they show no %.
+const num = (v) => (v === null || v === undefined || v === '' ? null : Number.isFinite(Number(v)) ? Number(v) : null);
+const finalFigures = (stamp, c) => (stamp && !PARTIAL.has(stamp) ? { resultPct: num(c.result_pct), vsSpyPct: num(c.vs_spy_pct) } : { resultPct: null, vsSpyPct: null });
+
 // Normalises the many ways exit_kind may be spelled in the ledger.
 export function exitStamp(kind, target) {
   const k = String(kind ?? '').toLowerCase();
@@ -64,7 +69,7 @@ export function trackedPicks(history) {
     if (p.packet_type === 'weekly_verdict') {
       for (const sym of (Array.isArray(p.free_picks) ? p.free_picks : []).map((x) => String(typeof x === 'string' ? x : x?.symbol).toUpperCase())) {
         const sig = signalFor(p, sym);
-        if (!picks.has(sym)) picks.set(sym, { symbol: sym, company: sig?.company, signalWeek: sig?.signal_week, picked: p.snapshot_date, stamp: 'STILL OPEN', vsSpy: null });
+        if (!picks.has(sym)) picks.set(sym, { symbol: sym, company: sig?.company, signalWeek: sig?.signal_week, picked: p.snapshot_date, stamp: 'STILL OPEN', vsSpy: null, resultPct: null, vsSpyPct: null });
       }
     }
     if (p.packet_type === 'monday_confirm') {
@@ -74,12 +79,14 @@ export function trackedPicks(history) {
         if (pick && pick.stamp === 'STILL OPEN') pick.stamp = 'VANISHED';
       }
       for (const c of Array.isArray(m.new_closes) ? m.new_closes : []) {
-        const pick = picks.get(String(c.symbol).toUpperCase());
+        // Packet symbols carry the exchange (NYSE:EFC); free_picks are bare tickers.
+        const pick = picks.get(String(c.symbol).split(':').pop().toUpperCase());
         if (!pick || (pick.signalWeek && c.signal_week && pick.signalWeek !== c.signal_week)) continue;
         const v = Number(c.vs_spy_pct);
         pick.stamp = exitStamp(c.exit_kind, c.target) ?? pick.stamp;
         // vs SPY is only final once the whole position has closed.
         pick.vsSpy = !PARTIAL.has(pick.stamp) && Number.isFinite(v) ? (v >= 0 ? 'BEAT SPY' : 'TRAILED SPY') : null;
+        Object.assign(pick, finalFigures(pick.stamp, c));
       }
     }
   }
@@ -122,7 +129,7 @@ export function resolveCard(card, packet, queueDir, history = []) {
     if (!text) continue;
     const bad = text.match(BANNED);
     if (bad) errors.push(`card.json ${field}: "${bad[0]}" — scores, rankings and advice wording are not allowed`);
-    if (PRICE_OR_PCT.test(text)) errors.push(`card.json ${field}: prices and % are not shown until 명재 approves publishing performance figures`);
+    if (PRICE_OR_PCT.test(text)) errors.push(`card.json ${field}: no prices or % in card text — result % for free picks is printed from the packet by the renderer`);
     for (const m of text.matchAll(/\d+(?:\.\d+)?/g)) if (!numbers.has(m[0])) errors.push(`card.json ${field}: number "${m[0]}" is not in the packet`);
   }
 
@@ -164,17 +171,23 @@ export function resolveCard(card, packet, queueDir, history = []) {
     const list = closes(packet);
     if (!list.length) errors.push('results card: packet.monday.new_closes is empty — no signal closed this week, so skip the results card (post the text only)');
     const pick = items.length ? items.map((i) => String(i.symbol ?? i.ticker).toUpperCase()) : list.map((c) => String(c.symbol).toUpperCase());
+    // Which closes were free picks (same signal week): only those carry result figures.
+    const free = new Set(trackedPicks(history).map((p) => `${p.symbol}|${p.signalWeek ?? ''}`));
+    const bare = (s) => String(s).split(':').pop().toUpperCase();
     for (const sym of pick) {
-      const c = list.find((x) => String(x.symbol).toUpperCase() === sym);
+      const c = list.find((x) => bare(x.symbol) === bare(sym));
       if (!c) { errors.push(`items: ${sym} is not in packet.monday.new_closes`); continue; }
       const stamp = exitStamp(c.exit_kind, c.target);
       if (!stamp) errors.push(`items: ${sym} has unknown exit_kind "${c.exit_kind}"`);
       const v = Number(c.vs_spy_pct);
       const final = !PARTIAL.has(stamp);
-      out.rows.push({ symbol: sym, company: signalFor(packet, sym)?.company ?? c.company, stamp, vsSpy: final && Number.isFinite(v) ? (v >= 0 ? 'BEAT SPY' : 'TRAILED SPY') : null });
+      const isFree = free.has(`${bare(sym)}|${c.signal_week ?? ''}`) || free.has(`${bare(sym)}|`);
+      out.rows.push({ symbol: bare(sym), company: signalFor(packet, sym)?.company ?? c.company, stamp, vsSpy: final && Number.isFinite(v) ? (v >= 0 ? 'BEAT SPY' : 'TRAILED SPY') : null,
+        ...(isFree ? finalFigures(stamp, c) : { resultPct: null, vsSpyPct: null }) });
     }
     const sc = packet.monthly_scorecard;
-    if (sc) out.stats.scorecard = { wins: sc.wins, losses: sc.losses, beatSpy: sc.beat_spy ?? sc.beat_spy_count };
+    // The monthly scorecard posts every month, good or bad, so its averages are shown whenever it is in the packet.
+    if (sc) out.stats.scorecard = { wins: sc.wins, losses: sc.losses, beatSpy: sc.beat_spy ?? sc.beat_spy_count, closed: num(sc.signals_closed), avgRet: num(sc.avg_ret_pct), avgExcess: num(sc.avg_excess_vs_spy_pct) };
     const finals = out.rows.filter((r) => !PARTIAL.has(r.stamp));
     const losses = finals.filter((r) => r.stamp === 'STOPPED OUT').length;
     if (!card.mood && losses > finals.length - losses) out.mood = 'apology';
