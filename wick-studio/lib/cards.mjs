@@ -10,6 +10,9 @@ import { esc, textWidth, wrap } from './text.mjs';
 
 export const SIZES = { portrait: { W: 1080, H: 1350 }, wide: { W: 1600, H: 900 } };
 const DISCLAIMER = 'Not financial advice';
+// Cards that print result figures carry the longer line (추가지침_성과공개.md §4).
+const DISCLAIMER_RESULTS = "Past results don't guarantee future results. Not financial advice.";
+const showsFigures = (card) => (card.rows ?? []).some((r) => r.resultPct != null) || card.stats?.scorecard?.avgRet != null;
 
 const STYLES = {
   A: { name: 'Scoreboard', bg: '#10141f', fg: '#eef1f7', muted: '#9aa3b5', panel: '#1a2030', rule: '#2a3142', band: '#1a2030', bandFg: '#eef1f7', ink: false },
@@ -91,7 +94,8 @@ function frame(style, L, card, handle) {
     s += `<text x="${L.pad}" y="${subY}" font-family="Inter" font-size="${subSize.toFixed(1)}" font-weight="600" fill="${S.muted}">${esc(card.subtitle)}</text>`;
   }
   // Footer
-  s += `<text x="${L.pad}" y="${L.footY}" font-family="Inter" font-size="22" font-weight="600" fill="${S.muted}">${DISCLAIMER}</text>`;
+  const figures = showsFigures(card);
+  s += `<text x="${L.pad}" y="${L.footY}" font-family="Inter" font-size="${figures && L.W <= L.H ? 18 : 22}" font-weight="600" fill="${S.muted}">${esc(figures ? DISCLAIMER_RESULTS : DISCLAIMER)}</text>`;
   s += `<text x="${L.W - L.pad}" y="${L.footY}" font-family="Inter" font-size="22" font-weight="800" fill="${S.muted}" text-anchor="end">${esc(handle)}</text>`;
   return { svg: s, bodyY: Math.max(L.bodyY, subY + 60) };
 }
@@ -322,7 +326,7 @@ function anatomyBody(style, L, card, y0) {
   return s;
 }
 
-export function renderCardSvg(card, { style = 'A', size = 'portrait', handle = '@Aistockpo' } = {}) {
+export function renderCardSvg(card, { style = 'A', size = 'portrait', handle = '@weeklywick' } = {}) {
   const L = layout(size);
   const f = frame(style, L, card, handle);
   // The tracker lists past free picks with their latest grade: the exit report's row layout.
