@@ -1,0 +1,13 @@
+{
+  "name": "wick-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Weekly Wick character rig and render pipeline",
+  "scripts": {
+    "drafts": "node scripts/drafts-sheet.mjs"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "2.6.2"
+  }
+}
