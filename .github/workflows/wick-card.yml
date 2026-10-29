@@ -1,0 +1,40 @@
+# Weekly Wick: renders today's image card from Google Drive when the PC has not.
+# The renderer lives in wick-studio/ on the claude/new-session-pbeq7n branch; this file sits on main
+# because GitHub only runs scheduled workflows from the default branch.
+# Secrets (Settings > Secrets and variables > Actions): GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN.
+# The repo is public: the script prints status lines only, never packet contents.
+name: Weekly Wick card
+on:
+  schedule:
+    # KST 17:47, 18:17, 18:47, 19:17, 20:17 (GitHub may start a few minutes late)
+    - cron: "47 8 * * *"
+    - cron: "17,47 9 * * *"
+    - cron: "17 10,11 * * *"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "KST date YYYY-MM-DD (default today)"
+        required: false
+concurrency:
+  group: wick-card
+  cancel-in-progress: false
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/new-session-pbeq7n
+          sparse-checkout: wick-studio
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci --no-audit --no-fund
+        working-directory: wick-studio
+      - run: node scripts/drive-card.mjs ${{ github.event.inputs.date }}
+        working-directory: wick-studio
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
