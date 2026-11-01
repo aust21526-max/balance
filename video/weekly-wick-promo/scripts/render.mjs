@@ -119,7 +119,7 @@ async function sheet(files, labels, out, cols = 6) {
 }
 
 // Cook harness: fixed shot stills (cook/SHOTS.md), a 24-frame contact sheet and an 8-frame strip around every cut.
-const SHOTS = { S01: 0, S02: 3.9, S03: 7.2, S04: 12.6, S05: 17.4, S06: 23.0, S07: 28.6 };
+const SHOTS = { S01: 0, S02: 4.3, S03: 7.4, S04: 12.6, S05: 17.6, S06: 23.4, S07: 28.6 };
 async function shots(round) {
   const COOK = resolve(ROOT, '..', '..', 'cook');
   const dir = join(COOK, 'stills', `r${round}`);

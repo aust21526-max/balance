@@ -156,3 +156,43 @@ Changes:
 - Transitions: graded now slides in horizontally (cover only used once); CTA entry is a horizontal page push with both pages opaque.
 - CTA: Wick bounces the whole time (excited), stamps by the feet, button pulses and mouth opens on two beats.
 - Timing: hook 4.6, brand 3.8, rule 5.6, week 5.0, graded 5.4, CTA 5.6 s.
+
+Stills: `cook/stills/r03/` | Side by side: `cook/compare/r03/`
+
+Scores, eyeballed: 2 fresh critics, median.
+
+| Shot | Comp | Color | Type | Detail |
+|---|---|---|---|---|
+| S01 hook frame 0 | 80 | 88 | 87 | 78 |
+| S02 hook wick | 78 | 86 | 83 | 77 |
+| S03 brand | 83 | 89 | 89 | 81 |
+| S04 rule | 77 | 86 | 84 | 74 |
+| S05 week | 81 | 86 | 87 | 77 |
+| S06 graded | 70 | 85 | 84 | 69 |
+| S07 CTA | 84 | 90 | 88 | 81 |
+
+Video: 6.6 and 6.7 -> median 6.65/10 (first frame 7.0, composition 6.75, color 7.75, motion 6.0, pacing 6.25). Sound not reviewed.
+
+Top gaps from critics (both name motion and transitions as the weakest area):
+1. Four transition styles with a visible seam on the horizontal slide; the week rows entered on a diagonal staircase.
+2. End card read as frozen for 4.6 s in the contact sheet (the pulses were too small to show at 1.27 s sampling).
+3. Graded card: empty stamp slots after the cut; the sorry pose read as drowsy.
+4. Hook: nearly static first 1.3 s; minor candles clipped at the right edge; Friday label collides with candles.
+5. Rule: the unplayed second candle read as broken; low panel contrast.
+
+Stop check: bar no | cap not reached | stills approved no | final no -> round 04
+
+## Round 04
+
+Time: 09:43 to 09:48 UTC (clock) | total elapsed 0.4h
+Focus: motion and transitions (single weakest area for both critics), then the graded-card void.
+
+Changes:
+- One motivated transition system: paper always enters from below and leaves upward (brand to rule, week to graded, rule to week), navy to navy is the flame cross, paper to paper is a page push.
+- Hook: slow camera push on the chart and Wick only (HUD stays fixed), minor candles inside the margin, Friday label under the line, chips lower, 목 amber and 금 red.
+- Week rows rise into a fixed column; tighter row pitch so Wick clears the Saturday bar; brighter day letters.
+- Rule: panels with a drop shadow and darker fill; a candle that has not played yet is not drawn.
+- Graded: stamps land as the paper arrives (0.0 and 0.6 s); tense pose instead of the drowsy tilt; Wick 0.85.
+- CTA: English tagline dropped (it lives in the brand scene), Wick 1.5x, three pose beats (hop with arms up, button press, stamps re-ink at 4.1 s).
+- Paper gets a soft warm vignette.
+- Retimed: hook 5.0, brand 3.2, rule 5.8, week 4.6, graded 6.0, CTA 5.4 s.
