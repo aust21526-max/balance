@@ -53,7 +53,7 @@ window.SCENES = S;
 
 // Sound cues in scene-local seconds (on the 120 bpm grid), read by scripts/soundtrack.mjs.
 const CUE_TABLE = {
-  hook: [[0.5, 'pop'], [2.0, 'whoosh'], [2.5, 'stamp'], [3.0, 'pop'], [3.5, 'pop'], [4.0, 'pop'], [4.5, 'pop']],
+  hook: [[0.5, 'pop'], [2.0, 'whoosh'], [2.5, 'stamp'], [3.0, 'pop'], [3.5, 'pop'], [4.5, 'pop']],
   brand: [[0, 'stamp'], [0.25, 'stamp'], [1.0, 'stamp'], [1.5, 'stamp']],
   rule: [[-0.4, 'whoosh'], [0.5, 'stamp'], [1.5, 'stamp'], [2.0, 'pop'], [3.0, 'pop']],
   week: [[-0.4, 'whoosh'], [0.5, 'pop'], [0.75, 'pop'], [1.0, 'pop'], [1.25, 'pop'], [1.5, 'pop'], [1.75, 'stamp'], [2.05, 'pop']],
@@ -129,7 +129,7 @@ function stamp(label, color, size, seed) {
   for (let i = 0; i < 110; i++) specks += `<circle cx="${f1((r() - 0.5) * w)}" cy="${f1((r() - 0.5) * h)}" r="${f1(0.8 + r() * size * 0.06)}" fill="#000"/>`;
   const id = `wear${seed}`;
   return `<mask id="${id}"><rect x="${-w}" y="${-h}" width="${w * 2}" height="${h * 2}" fill="#fff"/>${specks}</mask>
-    <g mask="url(#${id})" filter="url(#inkRough)" fill-opacity="0.9" stroke-opacity="0.9">
+    <g mask="url(#${id})" filter="url(#inkRough)" fill-opacity="1" stroke-opacity="1">
       <rect x="${f1(-w / 2)}" y="${f1(-h / 2)}" width="${f1(w)}" height="${f1(h)}" rx="${f1(size * 0.25)}" fill="none" stroke="${color}" stroke-width="${f1(size * 0.13)}"/>
       <rect x="${f1(-w / 2 + size * 0.22)}" y="${f1(-h / 2 + size * 0.22)}" width="${f1(w - size * 0.44)}" height="${f1(h - size * 0.44)}" rx="${f1(size * 0.15)}" fill="none" stroke="${color}" stroke-width="${f1(size * 0.055)}"/>
       <text x="0" y="${f1(size * 0.36)}" font-family="Inter" font-size="${size}" font-weight="900" text-anchor="middle" letter-spacing="${f1(size * 0.04)}" fill="${color}">${esc(label)}</text>
@@ -139,15 +139,16 @@ function stamp(label, color, size, seed) {
 // Stamp that drops from above the paper and lands with a heavy spring.
 function stampAt(lt, start, label, color, x, y, size, rot, seed) {
   if (lt < start) return '';
-  const k = spring(lt - start, SP.heavy);
-  const s = lerp(1.5, 1, k), op = clamp((lt - start) / 0.03);
+  const k = spring(lt - start, { mass: 1, stiffness: 900, damping: 42 });
+  const s = lerp(1.3, 1, k), op = clamp((lt - start) / 0.02);
   return `<g transform="translate(${f1(x)},${f1(y)}) rotate(${rot}) scale(${s.toFixed(4)})" opacity="${op.toFixed(3)}">${stamp(label, color, size, seed)}</g>`;
 }
 
 // The character from the real rig, feet at (x, y).
 function wick(t, x, y, scale, state) {
   const g = drawWick({ t, blink: blinkAt(t), up: true, ...state });
-  return `<g transform="translate(${f1(x - 300 * scale)},${f1(y - 712 * scale)}) scale(${scale.toFixed(4)})">${g}</g>`;
+  return `<ellipse cx="${f1(x)}" cy="${f1(y - 4 * scale)}" rx="${f1(120 * scale)}" ry="${f1(16 * scale)}" fill="#000" opacity="0.22"/>
+    <g transform="translate(${f1(x - 300 * scale)},${f1(y - 712 * scale)}) scale(${scale.toFixed(4)})">${g}</g>`;
 }
 
 // Same teardrop flame as the rig, for lighting the chart candle's wick.
@@ -272,7 +273,7 @@ function sceneHook(lt) {
     : popLine(lt, 2.0, '금요일에 밀리면', 540, 345, { size: 120, weight: 900 }) + popLine(lt, 2.2, '꼬리만 남고 끝', 540, 462, { size: 64, weight: 800, fill: '#ff8582' });
 
   // Wick watches the candle: calm, excited on the rise, tense on Thursday, gloomy at the close, then lit.
-  const mood = lt < 2.0 ? 'excited' : lt < 2.5 ? 'tense' : lt < 3.5 ? 'gloomy' : 'excited';
+  const mood = lt < 2.0 ? 'excited' : lt < 2.5 ? 'tense' : lt < 4.45 ? 'gloomy' : 'excited';
   const flameK = spring(lt - 3.5, { mass: 1, stiffness: 120, damping: 8 });
   const lean = mood === 'excited' ? 2 : mood === 'gloomy' ? -2 : 0;
 
@@ -287,7 +288,7 @@ function sceneHook(lt) {
       ${candle(cx, open, close, high, Math.max(open, close) + 46, cw, isRed ? C.red : C.green, true)}
       ${flame(lt, cx, high - 6, 0.5 * flameK)}
       ${bracket}
-      <g transform="translate(0,${f1(-60 * (Math.max(0, Math.sin(Math.PI * clamp((lt - 4.0) / 0.4))) + Math.max(0, Math.sin(Math.PI * clamp((lt - 4.5) / 0.4)))))}) rotate(${lean},235,1580)">${wick(lt, 235, 1580, 1.05, { mood, mouth: mood === 'excited' && (lt < 1.2 || lt > 3.5) ? 'wide' : 'closed', flameSize: mood === 'gloomy' ? 0.5 : 1 })}</g>
+      <g transform="translate(0,${f1(-60 * Math.max(0, Math.sin(Math.PI * clamp((lt - 4.5) / 0.4))))}) rotate(${lean},235,1580)">${wick(lt, 235, 1580, 1.05, { mood, mouth: mood === 'excited' && (lt < 1.2 || lt > 4.45) ? 'wide' : 'closed', flameSize: mood === 'gloomy' ? 0.5 : 1 })}</g>
     </g>
     ${chips}
   </g>`;
@@ -338,7 +339,7 @@ function miniChart(kind, k) {
 function chartPanel(y, kind, k) {
   const x = L, w = W - L - 120, h = 380;
   return `<rect x="${x + 6}" y="${y + 10}" width="${w}" height="${h}" rx="26" fill="${C.ink}" opacity="0.08"/>
-    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="26" fill="#e7dcc4" stroke="${C.ink}" stroke-opacity="0.28" stroke-width="3"/>
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="26" fill="#fbf8f1" stroke="${C.ink}" stroke-opacity="0.55" stroke-width="4"/>
     <g transform="translate(${x + 40},${y - 40}) scale(1.85)">${miniChart(kind, k)}</g>`;
 }
 function sceneRule(lt) {
@@ -389,7 +390,7 @@ function sceneWeek(lt) {
       const active = i === cur, done = cur > i;
       const ak = active ? spring(lt - (WEEK.cur0 + i * WEEK.step), SP.pop) : 0;
       s += `<g transform="translate(0,${f1(dy)})" opacity="${op.toFixed(3)}">
-        ${active ? `<rect x="64" y="${y - 80}" width="952" height="160" rx="36" fill="#22304d" stroke="${C.green}" stroke-width="3" transform="translate(540,${y}) scale(${lerp(0.94, 1, ak).toFixed(3)},1) translate(-540,${-y})"/>` : ''}
+        ${active ? `<rect x="64" y="${y - 80}" width="952" height="160" rx="36" fill="#22304d" stroke="${C.green}" stroke-width="3" transform="translate(540,${y}) scale(${lerp(0.94, 1, ak).toFixed(3)},1) translate(-540,${-y})"/>` : `<rect x="64" y="${y - 80}" width="952" height="160" rx="36" fill="#1a2236"/>`}
         <rect x="100" y="${y - 58}" width="116" height="116" rx="28" fill="${done || active ? '#173a2c' : '#2a3350'}" stroke="${done || active ? C.green : '#3b4666'}" stroke-width="3"/>
         ${text(d, 158, y + 22, { size: 58, weight: 900, fill: done || active ? '#9df0c6' : '#ffffff' })}
         ${text(label, 252, y + 25, { size: 74, weight: active ? 900 : 800, fill: done ? '#c8cfdc' : '#eef1f7', anchor: 'start' })}
@@ -414,13 +415,13 @@ function sceneGradedContent(lt) {
   if (lt >= hitB + 1.0) mood = 'excited';
   return `${text('틀린 판정도', L, 350, { size: 104, weight: 900, fill: C.ink, anchor: 'start' })}
     ${text('전부 공개합니다', L, 474, { size: 104, weight: 900, fill: C.ink, anchor: 'start' })}
-    ${text('SPY보다 잘했으면', L, 640, { size: 60, weight: 800, fill: C.inkSoft, anchor: 'start' })}
-    ${stampAt(lt, hitA, 'BEAT SPY', C.green, L + 250, 770, 66, -6, 31)}
-    ${text('SPY보다 못했어도', L, 960, { size: 60, weight: 800, fill: C.inkSoft, anchor: 'start' })}
-    ${stampAt(lt, hitB, 'TRAILED SPY', C.red, L + 330, 1090, 66, -4, 47)}
-    ${popLine(lt, 1.0, '모든 판정은', L, 1330, { size: 76, weight: 900, fill: C.ink, anchor: 'start' })}
-    ${popLine(lt, 1.0, 'SPY와 비교해 채점', L, 1422, { size: 76, weight: 900, fill: C.ink, anchor: 'start' })}
-    ${popLine(lt, 1.25, '매주 월요일, 결과 그대로', L, 1520, { size: 54, weight: 800, fill: C.inkSoft, anchor: 'start' })}
+    ${text('SPY보다 잘했으면', L, 645, { size: 66, weight: 900, fill: C.ink, anchor: 'start' })}
+    ${stampAt(lt, hitA, 'BEAT SPY', C.green, L + 300, 790, 84, -6, 31)}
+    ${text('SPY보다 못했어도', L, 985, { size: 66, weight: 900, fill: C.ink, anchor: 'start' })}
+    ${stampAt(lt, hitB, 'TRAILED SPY', C.red, L + 400, 1130, 84, -4, 47)}
+    ${popLine(lt, 1.0, '모든 판정은', L, 1370, { size: 76, weight: 900, fill: C.ink, anchor: 'start' })}
+    ${popLine(lt, 1.0, 'SPY와 비교해 채점', L, 1462, { size: 76, weight: 900, fill: C.ink, anchor: 'start' })}
+    ${popLine(lt, 1.25, '매주 월요일, 결과 그대로', L, 1560, { size: 56, weight: 800, fill: C.inkSoft, anchor: 'start' })}
     ${wick(lt, 880, 1850, 0.85, { mood, flameSize: 1 })}`;
 }
 
@@ -508,12 +509,14 @@ function frame(t) {
       const g = 1 - ease(e), r = cardRect(g), sc = r.w / W;
       body += layers.map((l) => l.svg).join(''); layers.length = 0;
       if (e < 1) {
+        const cf = clamp((e - 0.8) / 0.2);
         const cid = `zc${Math.round(r.w)}`;
         body += `<clipPath id="${cid}"><rect x="${f1(r.x)}" y="${f1(r.y)}" width="${f1(r.w)}" height="${f1(r.h)}" rx="${f1(r.rx)}"/></clipPath>`;
         body += paper(r.x, r.y, r.w, r.h, { band: 170 * sc, rx: r.rx, shadow: true }).replace('>WEEKLY WICK</text>', '></text>');
         body += `<g clip-path="url(#${cid})"><g transform="translate(${f1(r.x)},${f1(r.y)}) scale(${sc.toFixed(4)})">
           ${text('WEEKLY WICK', W - 64, 120, { size: 40, weight: 900, family: 'Inter', fill: C.paper, anchor: 'end', ls: 0.18 })}
-          ${sceneGradedContent(t - S.graded[0])}</g></g>`;
+          <g opacity="${(1 - cf).toFixed(3)}">${sceneGradedContent(t - S.graded[0])}</g></g></g>`;
+        if (cf > 0) body += `<g opacity="${cf.toFixed(3)}">${sceneVerdictContent(lt)}</g>`;
       } else {
         body += paper(r.x, r.y, r.w, r.h, { band: 110, rx: r.rx, shadow: true });
         body += sceneVerdictContent(lt);

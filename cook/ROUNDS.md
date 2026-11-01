@@ -270,3 +270,26 @@ Changes:
 - CTA: hop height 40, stamps clear of the body, handle, subline and button lifted off the footer.
 - Hook: chart group moved up 80 px into the middle band, chips raised off the footer.
 - Critic prompt now states that particles and specks are banned and the redaction is deliberate (both critics kept asking for them).
+
+Stills: `cook/stills/r07/` | Side by side: `cook/compare/r07/`
+
+Video: 7.2 (A) and 6.5 (B) -> median 6.85/10 (A: first frame 7.5, composition 7.0, color 7.5, motion 6.5, pacing 7.0). Sound not reviewed. Best so far.
+
+Top gaps from critics: cream scenes low contrast (panels beige on cream, stamps washed out); stamp landing reads as a soft blur; card copy swaps in one frame at the end of the shrink; Wick turns happy during the "only the tail is left" beat; week list empty on the right; graded scene thin below the stamps; no finish layer (Wick floats with no ground).
+Unverified claim rejected: critic A said finished rule copy shows mid-push at 8.37 s; the r08 cut strip shows it does not.
+
+Stop check: bar no | cap not reached | stills approved no | final no -> round 08
+
+## Round 08
+
+Time: 10:03 to 10:08 UTC (clock) | total elapsed 0.75h
+Focus: the cream scenes (B's weakest area) and stamp feel (A's motion notes).
+
+Changes:
+- Stamps at full ink opacity and a hard slam (1.3x to 1x on a stiff spring, about 0.1 s).
+- Rule panels: near-white fill with a clear ink border (contrast against the paper).
+- Graded: labels 66 px black, stamps 84 px, lines respaced to fill the page.
+- Week: every row sits on a full-width card, so the right side is not empty.
+- Wick gets a soft ground shadow in every scene.
+- Hook: Wick stays defeated through the tail beat and only lights up on the final hop before the cut.
+- Shrink morph: the card copy crossfades in over the last 20% of the zoom.
