@@ -48,7 +48,7 @@ const S = {
   verdict: [20.5, 25.0],
   cta: [25.0, 30],
 };
-const IN = { brand: ['cut', 0], rule: ['push', 0.4], week: ['push', 0.4], graded: ['pushX', 0.4], verdict: ['shrink', 0.5], cta: ['grow', 0.5] };
+const IN = { brand: ['cut', 0], rule: ['push', 0.4], week: ['push', 0.4], graded: ['pushX', 0.4], verdict: ['shrink', 0.5], cta: ['grow', 0.45] };
 window.SCENES = S;
 
 // Sound cues in scene-local seconds (on the 120 bpm grid), read by scripts/soundtrack.mjs.
@@ -218,11 +218,11 @@ const L = 120; // left text edge on paper scenes
 // 1. Hook. Frame 0 is the thumbnail: headline, LIVE pill, wordmark, a tall candle mid-rise and a big Wick
 //    watching it. The weekly candle climbs Mon..Wed, the Friday close gives it all back, and the
 //    leftover upper wick is where the name comes from. Then that wick catches fire.
-const HOOK = { open: 1500, cx: 560, cw: 210 };
+const HOOK = { open: 1420, cx: 560, cw: 210 };
 function hookCandle(lt) {
   // Monday is already done at frame 0; each later day moves the close with its own spring.
-  const steps = [[0.5, -190], [2.0, 330], [2.5, 610]];
-  let close = HOOK.open - 680, high = HOOK.open - 700;
+  const steps = [[0.5, -150], [2.0, 300], [2.5, 560]];
+  let close = HOOK.open - 640, high = HOOK.open - 660;
   steps.forEach(([st, d]) => {
     const k = spring(lt - st, { mass: 1.2, stiffness: 160, damping: 15 });
     close += d * k;
@@ -239,7 +239,7 @@ function sceneHook(lt) {
   const isRed = close > open;
 
   // A few past weeks to the right of the hero candle.
-  const hist = [[800, 1520, 1430, 1390, 1560], [885, 1440, 1490, 1405, 1520], [970, 1490, 1420, 1380, 1515]];
+  const hist = [[800, 1440, 1350, 1310, 1480], [885, 1360, 1410, 1325, 1440], [970, 1410, 1340, 1300, 1435]];
   let bgC = '';
   hist.forEach(([x, o, c, hi, lo]) => { bgC += candle(x, o, c, hi, lo, 62, c < o ? C.green : C.red); });
 
@@ -260,7 +260,7 @@ function sceneHook(lt) {
     const k = on ? spring(lt - dayT[i], SP.pop) : 1;
     const s = on ? 1 + 0.14 * Math.max(0, 1 - clamp((lt - dayT[i]) / 0.5)) * k : 1;
     const fill = on ? (i === 4 ? C.red : i === 3 ? C.amber : C.green) : '#2a3350';
-    chips += `<g transform="translate(${x},1782) scale(${s.toFixed(3)})">
+    chips += `<g transform="translate(${x},1730) scale(${s.toFixed(3)})">
       <rect x="-70" y="-50" width="140" height="100" rx="28" fill="${fill}" ${on ? '' : 'stroke="#3b4666" stroke-width="2"'}/>
       ${text(d, 0, 19, { size: 54, weight: 800, fill: on ? C.ink : past ? '#c3cad8' : '#9aa3b8' })}</g>`;
   });
@@ -281,13 +281,13 @@ function sceneHook(lt) {
     ${pill(60, 96, 'LIVE · Friday close', C.amber, { size: 32, dot: true })}
     ${text('WEEKLY WICK', 1020, 146, { size: 36, weight: 900, family: 'Inter', anchor: 'end', ls: 0.18 })}
     ${head}
-    <g transform="translate(540,1180) scale(${push.toFixed(4)}) translate(-540,-1180)">
+    <g transform="translate(540,1100) scale(${push.toFixed(4)}) translate(-540,-1100)">
       <g opacity="0.45">${bgC}</g>
       ${closeLine}
       ${candle(cx, open, close, high, Math.max(open, close) + 46, cw, isRed ? C.red : C.green, true)}
       ${flame(lt, cx, high - 6, 0.5 * flameK)}
       ${bracket}
-      <g transform="translate(0,${f1(-60 * (Math.max(0, Math.sin(Math.PI * clamp((lt - 4.0) / 0.4))) + Math.max(0, Math.sin(Math.PI * clamp((lt - 4.5) / 0.4)))))}) rotate(${lean},235,1650)">${wick(lt, 235, 1650, 1.05, { mood, mouth: mood === 'excited' && (lt < 1.2 || lt > 3.5) ? 'wide' : 'closed', flameSize: mood === 'gloomy' ? 0.5 : 1 })}</g>
+      <g transform="translate(0,${f1(-60 * (Math.max(0, Math.sin(Math.PI * clamp((lt - 4.0) / 0.4))) + Math.max(0, Math.sin(Math.PI * clamp((lt - 4.5) / 0.4)))))}) rotate(${lean},235,1580)">${wick(lt, 235, 1580, 1.05, { mood, mouth: mood === 'excited' && (lt < 1.2 || lt > 3.5) ? 'wide' : 'closed', flameSize: mood === 'gloomy' ? 0.5 : 1 })}</g>
     </g>
     ${chips}
   </g>`;
@@ -426,20 +426,24 @@ function sceneGradedContent(lt) {
 
 // 6. The Saturday deliverable: the judges' sheet shrinks into the real brand card (style B) on navy.
 //    Rows are ink-redacted on purpose: the promo shows the product without inventing tickers or numbers.
-const VCARD = { x: 110, y: 540, w: 860, h: 1075 };
+const VCARD = { x: 70, y: 520, w: 940, h: 1175 };
 function cardRect(g) { // g = 0: card on navy, g = 1: full-bleed sheet
   return { x: lerp(VCARD.x, 0, g), y: lerp(VCARD.y, 0, g), w: lerp(VCARD.w, W, g), h: lerp(VCARD.h, H, g), rx: lerp(30, 0, g) };
 }
 function verdictCard(lt) {
   const { x, y } = VCARD;
-  const rows = [[y + 380, 'QUALIFIED', C.green, 0.5], [y + 585, 'QUALIFIED', C.green, 1.0], [y + 790, 'VANISHED', C.gray, 1.5]];
+  const rows = [[y + 400, 'QUALIFIED', C.green, 0.5], [y + 625, 'QUALIFIED', C.green, 1.0], [y + 850, 'VANISHED', C.gray, 1.5]];
   let s = `${pill(x + 34, y + 28, 'CONFIRMED', C.green, { size: 28 })}
     ${text('이번 주 판정', x + 96, y + 250, { size: 84, weight: 900, fill: C.ink, anchor: 'start' })}`;
   rows.forEach(([ry, label, col, hit], i) => {
     s += `<rect x="${x + 96}" y="${ry - 58}" width="${360 - i * 30}" height="62" rx="10" fill="${C.ink}" filter="url(#inkRough)"/>
       <rect x="${x + 96}" y="${ry + 20}" width="${250 + i * 20}" height="30" rx="8" fill="${C.inkMuted}" opacity="0.55"/>
-      ${stampAt(lt, hit, label, col, x + 640, ry - 6, 44, -7 + i * 2, 80 + i)}`;
+      ${stampAt(lt, hit, label, col, x + 690, ry - 8, 56, -7 + i * 2, 80 + i)}`;
   });
+  const wk = spring(lt - 2.0, SP.bouncy);
+  const hop = -36 * Math.max(0, Math.sin(Math.PI * clamp((lt - 3.0) / 0.45)));
+  s += `${text('@weeklywick', x + VCARD.w - 56, y + VCARD.h - 46, { size: 34, weight: 800, family: 'Inter', fill: C.inkSoft, anchor: 'end', ls: 0 })}
+    ${lt > 1.8 ? `<g opacity="${clamp((lt - 1.8) / 0.15).toFixed(3)}" transform="translate(0,${f1(hop + (1 - wk) * 60)})">${wick(lt, x + 170, y + VCARD.h - 18, 0.36, { mood: 'excited', mouth: lt > 2.0 && lt < 2.6 ? 'wide' : 'closed', flameSize: 1.1 })}</g>` : ''}`;
   return s;
 }
 function sceneVerdictContent(lt) {
@@ -447,8 +451,7 @@ function sceneVerdictContent(lt) {
   const wy = lerp(2200, 1700, spring(lt - 2.0, SP.bouncy));
   return `${popLine(lt, -0.1, '판정은 매주 한 장으로', 540, 300, { size: 88, weight: 900 })}
     ${popLine(lt, 0.05, '통과는 초록, 소멸은 회색 도장', 540, 402, { size: 54, weight: 700, fill: C.soft })}
-    ${verdictCard(lt)}
-    <g transform="translate(0,${f1(hop)})">${wick(lt, 890, wy, 0.5, { mood: 'excited', mouth: lt > 2.0 && lt < 2.6 ? 'wide' : 'closed', flameSize: 1.1 })}</g>`;
+    ${verdictCard(lt)}`;
 }
 
 // 7. CTA on full-bleed judges' paper: a vertical take on the brand's X header, with beats so it never sits still.
@@ -459,18 +462,18 @@ function sceneCtaContent(lt) {
   const b = CTA_BEATS.reduce((m, t0) => Math.max(m, beat(t0)), 0);
   const btnT = 0.5, pk = spring(lt - btnT, SP.pop);
   const press = 1 - 0.06 * CTA_BEATS.reduce((m, t0) => Math.max(m, beat(t0 + 0.2, 0.25)), 0);
-  const cta = lt > btnT ? `<g transform="translate(540,1736) scale(${(lerp(0.6, 1, pk) * press).toFixed(3)})" opacity="${clamp((lt - btnT) / 0.1).toFixed(3)}">
+  const cta = lt > btnT ? `<g transform="translate(540,1726) scale(${(lerp(0.6, 1, pk) * press).toFixed(3)})" opacity="${clamp((lt - btnT) / 0.1).toFixed(3)}">
       <rect x="-320" y="${f1(-50 + 10 * (1 - press) / 0.06)}" width="640" height="128" rx="64" fill="#0d6b40" opacity="0.4"/>
       <rect x="-320" y="-64" width="640" height="128" rx="64" fill="${C.green}"/>
       ${text('X에서 팔로우', 0, 22, { size: 64, weight: 900, fill: C.ink, ls: -0.03 })}
     </g>` : '';
   return `${text('WEEKLY', 540, 290, { size: 168, weight: 900, family: 'Inter', fill: C.ink, ls: 0.01 })}
     ${text('WICK', 540, 450, { size: 168, weight: 900, family: 'Inter', fill: C.ink, ls: 0.01 })}
-    ${stampAt(lt, lt > 4.0 ? 4.0 : 0.25, 'QUALIFIED', C.green, 250, 1250, 46, -10, 71)}
-    ${stampAt(lt, lt > 4.25 ? 4.25 : 0.5, 'VANISHED', C.gray, 845, 1180, 46, 8, 72)}
-    <g transform="translate(0,${f1(-70 * b)}) rotate(${f1(3 * Math.sin(lt * 2.4))},540,1450)">${wick(lt, 540, 1450, sc, { mood: 'excited', mouth: b > 0.2 || lt < 1.0 ? 'wide' : 'closed', flameSize: 1.05 + 0.25 * b + 0.06 * Math.sin(lt * 3.1) })}</g>
-    ${text('@weeklywick', 540, 1566, { size: 108, weight: 900, family: 'Inter', fill: C.ink, ls: -0.01 })}
-    ${text('매주 토요일, 이번 주 판정 발표', 540, 1646, { size: 56, weight: 800, fill: C.inkSoft })}
+    ${stampAt(lt, lt > 4.0 ? 4.0 : 0.25, 'QUALIFIED', C.green, 215, 1270, 46, -10, 71)}
+    ${stampAt(lt, lt > 4.25 ? 4.25 : 0.5, 'VANISHED', C.gray, 875, 1200, 46, 8, 72)}
+    <g transform="translate(0,${f1(-40 * b)}) rotate(${f1(3 * Math.sin(lt * 2.4))},540,1450)">${wick(lt, 540, 1450, sc, { mood: 'excited', mouth: b > 0.2 || lt < 1.0 ? 'wide' : 'closed', flameSize: 1.05 + 0.25 * b + 0.06 * Math.sin(lt * 3.1) })}</g>
+    ${text('@weeklywick', 540, 1556, { size: 108, weight: 900, family: 'Inter', fill: C.ink, ls: -0.01 })}
+    ${text('매주 토요일, 이번 주 판정 발표', 540, 1632, { size: 56, weight: 800, fill: C.inkSoft })}
     ${cta}`;
 }
 
@@ -499,23 +502,41 @@ function frame(t) {
     const e = T ? clamp((t - (a - T)) / T) : 1, xk = To ? clamp((t - (b - To)) / To) : 0;
 
     if (k === 'verdict') {
-      // Entry: the graded sheet (full-bleed) shrinks into the card; its copy fades as the card copy arrives.
-      // Exit: handled by the CTA branch (grow).
+      // Entry: the graded sheet shrinks into the card with its copy still on it (a real zoom-out), then
+      // swaps to the card's own copy on the beat. Exit: handled by the CTA branch (grow).
       if (xk > 0) continue;
-      const g = 1 - ease(e), r = cardRect(g);
+      const g = 1 - ease(e), r = cardRect(g), sc = r.w / W;
       body += layers.map((l) => l.svg).join(''); layers.length = 0;
-      body += paper(r.x, r.y, r.w, r.h, { band: lerp(110, 170, g), rx: r.rx, shadow: g < 0.98 });
-      if (e < 0.35) body += `<g opacity="${(1 - clamp(e / 0.35)).toFixed(3)}">${sceneGradedContent(t - S.graded[0])}</g>`;
-      if (e > 0.6) body += `<g opacity="${easeOut((e - 0.6) / 0.4).toFixed(3)}">${sceneVerdictContent(lt)}</g>`;
+      if (e < 1) {
+        const cid = `zc${Math.round(r.w)}`;
+        body += `<clipPath id="${cid}"><rect x="${f1(r.x)}" y="${f1(r.y)}" width="${f1(r.w)}" height="${f1(r.h)}" rx="${f1(r.rx)}"/></clipPath>`;
+        body += paper(r.x, r.y, r.w, r.h, { band: 170 * sc, rx: r.rx, shadow: true }).replace('>WEEKLY WICK</text>', '></text>');
+        body += `<g clip-path="url(#${cid})"><g transform="translate(${f1(r.x)},${f1(r.y)}) scale(${sc.toFixed(4)})">
+          ${text('WEEKLY WICK', W - 64, 120, { size: 40, weight: 900, family: 'Inter', fill: C.paper, anchor: 'end', ls: 0.18 })}
+          ${sceneGradedContent(t - S.graded[0])}</g></g>`;
+      } else {
+        body += paper(r.x, r.y, r.w, r.h, { band: 110, rx: r.rx, shadow: true });
+        body += sceneVerdictContent(lt);
+      }
       footerDark = g > 0.5;
       continue;
     }
     if (k === 'cta') {
-      const g = ease(e), r = cardRect(g);
+      // The card grows back into a full-bleed sheet carrying its own copy, then the CTA lands on the beat.
+      const g = ease(e), r = cardRect(g), sc = r.w / VCARD.w;
       body += layers.map((l) => l.svg).join(''); layers.length = 0;
-      body += paper(r.x, r.y, r.w, r.h, { band: lerp(110, 0, g), rx: r.rx, shadow: g < 0.98 });
-      if (e < 0.35) body += `<g opacity="${(1 - clamp(e / 0.35)).toFixed(3)}">${sceneVerdictContent(t - S.verdict[0])}</g>`;
-      if (e > 0.6) body += `<g transform="translate(540,960) scale(${lerp(0.9, 1, easeOut((e - 0.6) / 0.4)).toFixed(4)}) translate(-540,-960)" opacity="${easeOut((e - 0.6) / 0.4).toFixed(3)}">${sceneCtaContent(lt)}</g>`;
+      if (e < 1) {
+        const cid = `zg${Math.round(r.w)}`, vl = t - S.verdict[0];
+        body += `<clipPath id="${cid}"><rect x="${f1(r.x)}" y="${f1(r.y)}" width="${f1(r.w)}" height="${f1(r.h)}" rx="${f1(r.rx)}"/></clipPath>`;
+        body += `<g opacity="${(1 - clamp(e / 0.3)).toFixed(3)}">${text('판정은 매주 한 장으로', 540, 300, { size: 88, weight: 900 })}${text('통과는 초록, 소멸은 회색 도장', 540, 402, { size: 54, weight: 700, fill: C.soft })}</g>`;
+        body += paper(r.x, r.y, r.w, r.h, { band: 110 * sc, rx: r.rx, shadow: true }).replace('>WEEKLY WICK</text>', '></text>');
+        body += `<g clip-path="url(#${cid})"><g transform="translate(${f1(r.x - VCARD.x * sc)},${f1(r.y - VCARD.y * sc)}) scale(${sc.toFixed(4)})">
+          ${text('WEEKLY WICK', VCARD.x + VCARD.w - 64, VCARD.y + 60, { size: 40, weight: 900, family: 'Inter', fill: C.paper, anchor: 'end', ls: 0.18 })}
+          ${verdictCard(vl)}</g></g>`;
+      } else {
+        body += paper(0, 0, W, H, { band: 0 });
+        body += sceneCtaContent(lt);
+      }
       footerDark = g > 0.5;
       continue;
     }

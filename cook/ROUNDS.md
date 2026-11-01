@@ -250,3 +250,23 @@ Changes:
 - CTA down to 5.0 s with three beats and a stamp re-ink.
 - Pill widths measured per character class so uppercase labels never clip.
 - Shot list gains S07 (verdict card vs R01); the CTA becomes S08.
+
+Stills: `cook/stills/r06/` | Side by side: `cook/compare/r06/`
+
+Video: 6.7 (A) and 6.5 (B) -> median 6.6/10 (first frame 7.0, composition 6.75, color 7.75, motion 6.0, pacing 5.75). Sound not reviewed.
+
+Top gaps from critics (both): blank paper frames inside the shrink and grow morphs (20.2 and 24.7 s); verdict card too small with tiny stamps and a mascot on its corner; end card hold; small layout collisions on the CTA (flame into WICK on the hop, stamps through arms, button near the footer); hook middle band.
+
+Stop check: bar no | cap not reached | stills approved no | final no -> round 07
+
+## Round 07
+
+Time: 09:58 to 10:04 UTC (clock) | total elapsed 0.7h
+Focus: the morph transitions (worst moment for both critics), then the verdict card and CTA layout.
+
+Changes:
+- Shrink and grow are real zooms: the graded page scales down into the card with its copy on it, and the card scales back up to full-bleed with its copy on it; content swaps on the beat when the zoom lands, so no frame is empty.
+- Verdict card 940 x 1175 with 56 px stamps; Wick seated inside the card's empty lower band with @weeklywick, as on the real card.
+- CTA: hop height 40, stamps clear of the body, handle, subline and button lifted off the footer.
+- Hook: chart group moved up 80 px into the middle band, chips raised off the footer.
+- Critic prompt now states that particles and specks are banned and the redaction is deliberate (both critics kept asking for them).
