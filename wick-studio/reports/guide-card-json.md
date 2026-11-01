@@ -28,7 +28,7 @@
 상단 배지는 템플릿으로 정해집니다: verdict = CONFIRMED, results = **GRADED · Exit report** (2026-10-25 명재 결정), track = **TRACKED · Every free pick**, anatomy = **HOW IT WORKS · Illustration**, race = LIVE.
 
 **도장은 card.json에 쓰지 않습니다.** 렌더러가 패킷에서 직접 정합니다.
-- verdict: `free_picks` → QUALIFIED, `publish: "free post: vanished log"` → VANISHED, `earnings_caution: true` → EARNINGS WEEK. 통과 종목 수도 패킷에서 셉니다.
+- verdict: `items`는 무료 종목 최대 5개(2026-11-01부터 매주 5개). 줄이 넘치면 렌더가 알아서 줄입니다: 먼저 `company_blurb` 줄을 빼고(티커·회사명만), 그래도 넘치면 세로 카드에서는 차트를 뺍니다(가로 `--wide` 카드는 차트 유지). 차트와 기업 소개를 크게 보여줄 카드는 1~2개 종목으로 따로 만드세요. `free_picks` → QUALIFIED, `publish: "free post: vanished log"` → VANISHED, `earnings_caution: true` → EARNINGS WEEK. 통과 종목 수도 패킷에서 셉니다.
 - results: `monday.new_closes`의 `exit_kind` → FIRST TARGET(중앙밴드 25% 익절, 나머지 보유 중) / SECOND TARGET(상단밴드 50% 익절, 마지막 25% 추적 중) / STOPPED OUT / TRAILING EXIT, `vs_spy_pct` 부호 → BEAT SPY / TRAILED SPY. **무료 공개 종목(최근 8주 `free_picks`, 같은 신호 주)이 완전히 청산된 경우에만** 결과 %와 SPY 대비 %p를 렌더가 패킷 값으로 찍습니다(이익·손실 동일). 무료 종목이 아닌 청산과 FIRST/SECOND TARGET(일부만 청산, 아직 최종 결과 아님)은 %·SPY 비교 없이 도장만. `items`를 생략하면 그 주 청산 전체. `monthly_scorecard`가 있으면 "MONTH SO FAR" 박스(승·패·SPY 상회 수와 평균 결과 %·SPY 대비 %p, 좋든 나쁘든 매달).
 - track: 최근 8주 토요일 패킷의 `free_picks`를 모으고, 그 뒤 월요일 패킷의 `monday.new_closes`·`monday.vanished`로 최신 상태를 찍습니다 → STILL OPEN / FIRST TARGET(중앙밴드) / SECOND TARGET(상단밴드) / STOPPED OUT / TRAILING EXIT / VANISHED, 완전히 청산된 종목만 BEAT SPY / TRAILED SPY와 결과 %·SPY 대비 %p(이익·손실 동일). 이미 무료로 공개한 종목이라 이름을 씁니다.
 - race: 후보 수(`summary.candidates`)와 태그 상위 3개를 패킷에서 계산. **`items` 금지, 종목명 금지.**

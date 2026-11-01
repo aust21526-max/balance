@@ -140,25 +140,45 @@ function verdictBody(style, L, card, y0) {
   const S = STYLES[style];
   const C = columns(L, y0, 230);
   let s = bigCount(style, C.sx, C.sy, card.stats.qualified, 'QUALIFIED', 'this week', L.W > L.H);
-  let y = C.ry;
+  const blurbLines = (row) => (row.blurb ? wrap(row.blurb, 32, C.rw - STAMP_COL - 20, 0.55).slice(0, 4) : []);
+  const fullH = (row) => { const n = blurbLines(row).length; return 160 + (n ? 46 + (n - 1) * 40 : 0); };
+  // Up to five free picks: full rows with the company blurb when they fit, otherwise compact rows
+  // (ticker and company only), and on a portrait card the chart strip gives way before rows shrink.
+  const bottom = L.footY - 70;
+  let chart = card.chart && L.W <= L.H;
+  const start = () => C.ry + (chart ? 330 : 0);
+  const total = (h) => card.rows.reduce((a, r) => a + h(r), 0);
+  const compact = total(fullH) > bottom - start();
+  const COMPACT = 118;
+  if (compact && chart && total(() => COMPACT) * 0.75 > bottom - start()) chart = false; // rows may shrink to 75% before the chart goes
+  const k = compact ? Math.min(1, (bottom - start()) / Math.max(1, total(() => COMPACT))) : 1;
   if (card.chart) {
     // Portrait: strip under the count. Wide: under the count in the left column.
-    if (L.W > L.H) s += chartStrip(C.sx, C.sy + 350, C.sw, 150, card.chart);
-    else { s += chartStrip(C.rx, y, L.bodyW, 300, card.chart); y += 330; }
+    // (Wide: below the stacked count, clear of the footer line.)
+    if (L.W > L.H) s += chartStrip(C.sx, C.sy + 365, C.sw, Math.min(150, L.footY - 45 - (C.sy + 365)), card.chart);
+    else if (chart) s += chartStrip(C.rx, C.ry, L.bodyW, 300, card.chart);
   }
+  let y = start();
   for (const row of card.rows) {
     s += `<line x1="${C.rx}" y1="${y}" x2="${C.rx + C.rw}" y2="${y}" stroke="${S.rule}" stroke-width="3"/>`;
+    const sx = C.rx + C.rw - STAMP_COL / 2;
+    if (compact) {
+      const h = COMPACT * k;
+      s += `<text x="${C.rx}" y="${y + 62 * k}" font-family="Inter" font-size="${(56 * Math.max(k, 0.8)).toFixed(0)}" font-weight="900" fill="${S.fg}">$${esc(row.symbol)}</text>`;
+      if (row.company && k > 0.8) s += `<text x="${C.rx}" y="${y + 98 * k}" font-family="Inter" font-size="26" font-weight="700" fill="${S.muted}">${esc(row.company)}</text>`;
+      s += stamp(style, row.stamp, sx, y + 44 * k, 30 * Math.max(k, 0.8), -8).svg;
+      if (row.earnings) s += stamp(style, 'EARNINGS WEEK', sx, y + 92 * k, 20 * Math.max(k, 0.8), -4).svg;
+      y += h;
+      continue;
+    }
     s += `<text x="${C.rx}" y="${y + 78}" font-family="Inter" font-size="68" font-weight="900" fill="${S.fg}">$${esc(row.symbol)}</text>`;
     if (row.company) s += `<text x="${C.rx}" y="${y + 120}" font-family="Inter" font-size="30" font-weight="700" fill="${S.muted}">${esc(row.company)}</text>`;
     let ry = y + 120;
-    if (row.blurb) {
-      const bl = wrap(row.blurb, 32, C.rw - STAMP_COL - 20, 0.55).slice(0, 4);
-      bl.forEach((line, i) => {
-        s += `<text x="${C.rx}" y="${ry + 46 + i * 40}" font-family="Inter" font-size="32" font-weight="600" fill="${S.fg}">${esc(line)}</text>`;
-      });
-      ry += 46 + (bl.length - 1) * 40;
-    }
-    const sx = C.rx + C.rw - STAMP_COL / 2;
+    const bl = blurbLines(row);
+    bl.forEach((line, i) => {
+      s += `<text x="${C.rx}" y="${ry + 46 + i * 40}" font-family="Inter" font-size="32" font-weight="600" fill="${S.fg}">${esc(line)}</text>`;
+    });
+    if (bl.length) ry += 46 + (bl.length - 1) * 40;
     s += stamp(style, row.stamp, sx, y + 56, 34, -8).svg;
     if (row.earnings) s += stamp(style, 'EARNINGS WEEK', sx, y + 126, 24, -4).svg;
     y = ry + 40;
