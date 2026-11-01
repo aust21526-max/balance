@@ -333,3 +333,22 @@ Changes:
 - New loop tail (28.5 to 30 s): a push back into the hook's first frame, so the film loops seamlessly on X. Measured: last frame vs frame 0 mean abs diff 0.34/255 (flame flicker only).
 - Week 3.5 s: cursor on eighth notes from the first beat.
 - Retimed: hook 5.5, brand 3.0, rule 4.0, week 3.5, graded 4.0, verdict 4.5, CTA 4.0, loop 1.5 s.
+
+Stills: `cook/stills/r10/` | Side by side: `cook/compare/r10/`
+
+Video: 7.3 (A) and 7.0 (B) -> median 7.15/10. Recovered from round 09 (7.0), still below round 08 (7.3). Sound not reviewed.
+A's weakest area: the week list (dark UI menu, low contrast, half-empty until the last half-second, flame edge artifact at 13.97 s). B's: the first frame. Both: stamps should land on the cut, not a beat later.
+Decision: the smoke puffs on a gloomy Wick come from the real character rig (characters/rig.mjs), not decorative particles, so they stay.
+
+Stop check: bar no | cap not reached | stills approved no | final no -> round 11
+
+## Round 11
+
+Time: 10:16 to 10:19 UTC (clock) | total elapsed 1.0h
+Focus: the week scene (A's weakest), stamps on the cut.
+
+Changes:
+- Week rebuilt as three large cards with the brand's real status pills from lib/cards.mjs statusPill: 월 GRADED · Exit report (#7fb2ff), 목 LIVE · Confirms at Friday close (amber), 토 CONFIRMED · Weekly close (green, full card). Each lights on its own beat (0, 0.5, 1.0 s); Wick rises in at 1.2 s and hops at 2.0 s. 3.0 s.
+- Rule and verdict: first stamp on the cut, second half a beat later, closing line at 1.0 s.
+- Hook to brand is now a push like the other navy/paper cuts.
+- CTA 4.5 s with four beats; more air between Wick, the handle and the button.
