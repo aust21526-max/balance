@@ -145,7 +145,7 @@ Stop check: bar no | cap not reached | stills approved no | final no -> round 03
 
 ## Round 03
 
-Time: 09:40 to 09:52 UTC | total elapsed 0.5h
+Time: 09:40 to 09:42 UTC (clock) | total elapsed 0.3h
 Focus: composition density (both critics' single weakest area) and the remaining transition faults.
 
 Changes:
