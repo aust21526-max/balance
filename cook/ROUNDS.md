@@ -196,3 +196,36 @@ Changes:
 - CTA: English tagline dropped (it lives in the brand scene), Wick 1.5x, three pose beats (hop with arms up, button press, stamps re-ink at 4.1 s).
 - Paper gets a soft warm vignette.
 - Retimed: hook 5.0, brand 3.2, rule 5.8, week 4.6, graded 6.0, CTA 5.4 s.
+
+Stills: `cook/stills/r04/` | Side by side: `cook/compare/r04/`
+
+Scores, eyeballed: 2 fresh critics, median.
+
+| Shot | Comp | Color | Type | Detail |
+|---|---|---|---|---|
+| S01 hook frame 0 | 82 | 90 | 87 | 81 |
+| S02 hook wick | 81 | 89 | 84 | 79 |
+| S03 brand | 82 | 82 | 87 | 81 |
+| S04 rule | 80 | 85 | 81 | 78 |
+| S05 week | 75 | 85 | 84 | 76 |
+| S06 graded | 79 | 89 | 86 | 81 |
+| S07 CTA | 85 | 91 | 86 | 85 |
+
+Video: 6.6 and 6.8 -> median 6.7/10 (first frame 6.75, composition 6.75, color 7.75, motion 6.25, pacing 6.25). Sound not reviewed.
+
+Top gaps from critics: the hook-to-brand cross dissolve reads as a dead dip; vertical cover/uncover leaves old content visible behind the moving paper ("overlap"); end card and hook first second look static in 1.27 s samples; week list is text-only with an empty lower third.
+
+Stop check: bar no | cap not reached | stills approved no | final no -> round 05
+
+## Round 05
+
+Time: 09:47 to 09:51 UTC (clock) | total elapsed 0.5h
+Focus: motion grammar and pacing (weakest area for both critics).
+
+Changes:
+- Timing locked to the 120 bpm soundtrack: every cut, stamp hit, day tick and hop lands on a beat or half beat.
+- Transitions: hook to brand is a hard match cut on the beat (lit wick to lit Wick, wordmark already slamming); every navy/paper change is a true push (old scene leaves upward while the new one arrives, no overlap); paper to paper stays a horizontal page push.
+- Hook: the first beat visibly shoots the candle higher; Wick fully inside the frame; candle body has gloss and a shaded side; two hops on the beat at the end.
+- Week: eighth-note day cursor, larger rows, smaller Wick clear of the bar.
+- Rule: hop beat in the quiet stretch. CTA: Wick bounces and sways continuously, flame breathes, four beats.
+- Retimed: hook 5.5, brand 3.0, rule 5.5, week 4.0, graded 6.0, CTA 6.0 s.
