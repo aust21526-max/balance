@@ -229,3 +229,24 @@ Changes:
 - Week: eighth-note day cursor, larger rows, smaller Wick clear of the bar.
 - Rule: hop beat in the quiet stretch. CTA: Wick bounces and sways continuously, flame breathes, four beats.
 - Retimed: hook 5.5, brand 3.0, rule 5.5, week 4.0, graded 6.0, CTA 6.0 s.
+
+Stills: `cook/stills/r05/` | Side by side: `cook/compare/r05/`
+
+Video: 6.8 (A) and 6.5 (B) -> median 6.65/10 (first frame 7.0, composition 6.5, color 7.25, motion 6.0, pacing 5.75). Sound not reviewed. Flat against round 04.
+
+Top gaps from critics: the back half (8 to 30 s) is a slow slideshow: scenes get longer, sit static after their builds, and the same vertical push repeats three times; S05 is a text-only list; S06 holds 4.5 s fully built; end card about 6 s.
+
+Stop check: bar no | cap not reached | stills approved no | final no -> round 06
+
+## Round 06
+
+Time: 09:52 to 09:58 UTC (clock) | total elapsed 0.6h
+Focus: back-half pacing and structure (the single weakest area for both critics), since small fixes had stopped moving the score.
+
+Changes:
+- Rule, week and graded cut to 4.0 s each with every event on a beat and no post-build hold.
+- New scene, the Saturday verdict card (20.5 to 25.0 s): the full-bleed judges' sheet shrinks into the real brand card style B on navy; rows are ink-redacted on purpose (no invented tickers or numbers), QUALIFIED / QUALIFIED / VANISHED slam on consecutive beats, Wick pops in and hops.
+- Transitions: hook to brand match cut, two vertical pushes, one horizontal push (week to graded), shrink (sheet to card), grow (card to CTA sheet). Each is motivated by what the paper does.
+- CTA down to 5.0 s with three beats and a stamp re-ink.
+- Pill widths measured per character class so uppercase labels never clip.
+- Shot list gains S07 (verdict card vs R01); the CTA becomes S08.
