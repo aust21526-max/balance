@@ -40,24 +40,24 @@ const C = {
 
 // Scene table (seconds) and the transition into each scene (type, seconds of overlap before the cut).
 const S = {
-  hook: [0, 5.4],
-  brand: [5.4, 9.0],
-  rule: [9.0, 14.1],
-  week: [14.1, 19.1],
-  graded: [19.1, 24.3],
-  cta: [24.3, 30],
+  hook: [0, 4.6],
+  brand: [4.6, 8.4],
+  rule: [8.4, 14.0],
+  week: [14.0, 19.0],
+  graded: [19.0, 24.4],
+  cta: [24.4, 30],
 };
-const IN = { brand: ['cross', 0.3], rule: ['cover', 0.45], week: ['uncover', 0.45], graded: ['cover', 0.45], cta: ['expand', 0.5] };
+const IN = { brand: ['cross', 0.3], rule: ['cover', 0.45], week: ['uncover', 0.45], graded: ['slide', 0.45], cta: ['expand', 0.5] };
 window.SCENES = S;
 
 // Sound cues in scene-local seconds, read by scripts/soundtrack.mjs.
 const CUE_TABLE = {
-  hook: [[0.6, 'pop'], [1.3, 'pop'], [2.6, 'whoosh'], [3.3, 'stamp'], [3.6, 'pop'], [4.15, 'pop']],
+  hook: [[0.45, 'pop'], [1.85, 'whoosh'], [2.6, 'stamp'], [2.9, 'pop'], [3.45, 'pop']],
   brand: [[-0.3, 'whoosh'], [-0.12, 'stamp'], [0.06, 'stamp'], [1.2, 'stamp'], [1.45, 'stamp']],
-  rule: [[-0.45, 'whoosh'], [1.2, 'stamp'], [2.6, 'stamp'], [3.0, 'pop']],
-  week: [[-0.45, 'whoosh'], [0.55, 'pop'], [0.91, 'pop'], [1.27, 'pop'], [1.63, 'pop'], [1.99, 'pop'], [2.35, 'stamp'], [2.65, 'pop']],
-  graded: [[-0.45, 'whoosh'], [0.45, 'stamp'], [1.15, 'stamp'], [2.2, 'pop']],
-  cta: [[-0.5, 'whoosh'], [0.35, 'stamp'], [0.55, 'stamp'], [0.75, 'pop'], [2.6, 'pop'], [4.2, 'pop']],
+  rule: [[-0.45, 'whoosh'], [1.0, 'stamp'], [2.35, 'stamp'], [2.8, 'pop']],
+  week: [[-0.45, 'whoosh'], [0.45, 'pop'], [0.79, 'pop'], [1.13, 'pop'], [1.47, 'pop'], [1.81, 'pop'], [2.15, 'stamp'], [2.45, 'pop']],
+  graded: [[-0.45, 'whoosh'], [0.2, 'stamp'], [0.85, 'stamp'], [1.7, 'pop']],
+  cta: [[-0.5, 'whoosh'], [0.3, 'stamp'], [0.5, 'stamp'], [0.6, 'pop'], [2.0, 'pop'], [3.6, 'pop']],
 };
 window.CUES = Object.entries(CUE_TABLE).flatMap(([k, list]) => list.map(([d, kind]) => ({ at: +(S[k][0] + d).toFixed(3), kind })));
 
@@ -159,9 +159,10 @@ function flame(t, x, y, s) {
     <path d="${TEARDROP}" fill="#fff2a8" transform="translate(0,-7.5) scale(51)"/></g>`;
 }
 
-function candle(cx, open, close, high, low, w, color) {
+function candle(cx, open, close, high, low, w, color, gloss = false) {
   const top = Math.min(open, close), bot = Math.max(open, close);
-  return `<line x1="${f1(cx)}" y1="${f1(high)}" x2="${f1(cx)}" y2="${f1(low)}" stroke="${color}" stroke-width="${f1(Math.max(4, w * 0.11))}" stroke-linecap="round"/>
+  const gl = gloss && bot - top > 60 ? `<rect x="${f1(cx - w / 2 + w * 0.12)}" y="${f1(top + 22)}" width="${f1(w * 0.13)}" height="${f1(Math.min(bot - top - 44, (bot - top) * 0.6))}" rx="${f1(w * 0.065)}" fill="#fff" fill-opacity="0.3"/>` : '';
+  return gl + `<line x1="${f1(cx)}" y1="${f1(high)}" x2="${f1(cx)}" y2="${f1(low)}" stroke="${color}" stroke-width="${f1(Math.max(4, w * 0.11))}" stroke-linecap="round"/>
     <rect x="${f1(cx - w / 2)}" y="${f1(top)}" width="${f1(w)}" height="${f1(Math.max(6, bot - top))}" rx="${f1(w * 0.08)}" fill="${color}"/>`;
 }
 
@@ -214,8 +215,8 @@ const L = 120; // left text edge on paper scenes
 const HOOK = { open: 1500, cx: 560, cw: 210 };
 function hookCandle(lt) {
   // Monday is already done at frame 0; each later day moves the close with its own spring.
-  const steps = [[0.6, -240], [1.3, -250], [2.6, 380], [3.3, 600]];
-  let close = HOOK.open - 400, high = HOOK.open - 420;
+  const steps = [[0.45, -70], [1.85, 330], [2.6, 600]];
+  let close = HOOK.open - 800, high = HOOK.open - 820;
   steps.forEach(([st, d]) => {
     const k = spring(lt - st, { mass: 1.2, stiffness: 160, damping: 15 });
     close += d * k;
@@ -225,7 +226,7 @@ function hookCandle(lt) {
 }
 function sceneHook(lt) {
   const { open, cx, cw } = HOOK;
-  const days = ['월', '화', '수', '목', '금'], dayT = [-1, 0.6, 1.3, 2.6, 3.3];
+  const days = ['월', '화', '수', '목', '금'], dayT = [-3, -2, -1, 1.85, 2.6];
   let day = 0;
   dayT.forEach((d, i) => { if (lt >= d) day = i; });
   const { close, high } = hookCandle(lt);
@@ -236,12 +237,12 @@ function sceneHook(lt) {
   let bgC = '';
   hist.forEach(([x, o, c, hi, lo]) => { bgC += candle(x, o, c, hi, lo, 62, c < o ? C.green : C.red); });
 
-  const closeY = open + 130, lineK = easeOut((lt - 3.1) / 0.5);
+  const closeY = open + 130, lineK = easeOut((lt - 2.4) / 0.5);
   const closeLine = lineK > 0 ? `<line x1="${f1(540 - 500 * lineK)}" y1="${closeY}" x2="${f1(540 + 500 * lineK)}" y2="${closeY}" stroke="${C.text}" stroke-width="5" stroke-dasharray="20 14" opacity="0.75"/>
     ${text('금요일 마감', 1016, closeY - 26, { size: 46, weight: 800, fill: C.soft, anchor: 'end', opacity: lineK })}` : '';
 
-  const bk = spring(lt - 3.6, SP.pop);
-  const bracket = lt > 3.6 ? `<g opacity="${clamp((lt - 3.6) / 0.12).toFixed(3)}" transform="translate(${f1(lerp(40, 0, bk))},0)">
+  const bk = spring(lt - 2.9, SP.pop);
+  const bracket = lt > 2.9 ? `<g opacity="${clamp((lt - 2.9) / 0.12).toFixed(3)}" transform="translate(${f1(lerp(40, 0, bk))},0)">
       <path d="M ${cx + 140} ${f1(high)} h 30 v ${f1(open - 20 - high)} h -30" fill="none" stroke="${C.label}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
       ${text('이게', cx + 196, (high + open) / 2 - 18, { size: 66, weight: 900, fill: C.label, anchor: 'start' })}
       ${text('윅(Wick)', cx + 196, (high + open) / 2 + 58, { size: 66, weight: 900, fill: C.label, anchor: 'start' })}
@@ -258,15 +259,15 @@ function sceneHook(lt) {
       ${text(d, 0, 19, { size: 54, weight: 800, fill: on ? C.ink : past ? '#c3cad8' : '#9aa3b8' })}</g>`;
   });
 
-  const shk = shake(lt - 3.35, 0.4, 14);
-  const rising = lt < 2.55;
+  const shk = shake(lt - 2.65, 0.4, 14);
+  const rising = lt < 1.8;
   const head = rising
     ? text('주중에 급등?', 540, 345, { size: 120, weight: 900 }) + text('아직 아무것도 아닙니다', 540, 462, { size: 64, weight: 700, fill: C.soft })
-    : popLine(lt, 2.6, '금요일에 밀리면', 540, 345, { size: 120, weight: 900 }) + popLine(lt, 2.8, '꼬리만 남고 끝', 540, 462, { size: 64, weight: 800, fill: '#ff8582' });
+    : popLine(lt, 1.85, '금요일에 밀리면', 540, 345, { size: 120, weight: 900 }) + popLine(lt, 2.05, '꼬리만 남고 끝', 540, 462, { size: 64, weight: 800, fill: '#ff8582' });
 
   // Wick watches the candle: calm, excited on the rise, tense on Thursday, gloomy at the close, then lit.
-  const mood = lt < 0.9 ? 'calm' : lt < 2.6 ? 'excited' : lt < 3.3 ? 'tense' : lt < 4.15 ? 'gloomy' : 'excited';
-  const flameK = spring(lt - 4.15, { mass: 1, stiffness: 120, damping: 8 });
+  const mood = lt < 1.85 ? 'excited' : lt < 2.6 ? 'tense' : lt < 3.45 ? 'gloomy' : 'excited';
+  const flameK = spring(lt - 3.45, { mass: 1, stiffness: 120, damping: 8 });
   const lean = mood === 'excited' ? 4 : mood === 'gloomy' ? -3 : 0;
 
   return `<g transform="translate(${f1(shk.x)},${f1(shk.y)})">
@@ -275,11 +276,11 @@ function sceneHook(lt) {
     ${head}
     <g opacity="0.45">${bgC}</g>
     ${closeLine}
-    ${candle(cx, open, close, high, Math.max(open, close) + 46, cw, isRed ? C.red : C.green)}
+    ${candle(cx, open, close, high, Math.max(open, close) + 46, cw, isRed ? C.red : C.green, true)}
     ${flame(lt, cx, high - 6, 0.6 * flameK)}
     ${bracket}
-    <g transform="rotate(${lean},215,1640)">${wick(lt, 215, 1640, 0.78, { mood, mouth: mood === 'excited' && lt < 2.2 ? 'wide' : 'closed', flameSize: mood === 'gloomy' ? 0.5 : 1 })}</g>
-    <g opacity="${(1 - ease((lt - 3.85) / 0.3)).toFixed(3)}">${chips}</g>
+    <g transform="rotate(${lean},205,1640)">${wick(lt, 205, 1640, 0.9, { mood, mouth: mood === 'excited' && (lt < 1.2 || lt > 3.45) ? 'wide' : 'closed', flameSize: mood === 'gloomy' ? 0.5 : 1 })}</g>
+    ${chips}
   </g>`;
 }
 
@@ -296,8 +297,8 @@ function sceneBrand(lt) {
   return `<g transform="translate(${f1(shk.x + shk2.x + shk3.x)},${f1(shk.y + shk2.y + shk3.y)})">
     ${slam('WEEKLY', -0.12, 330)}${slam('WICK', 0.06, 492)}
     ${popLine(lt, 0.4, 'Weekly close or it didn\'t happen.', 540, 600, { size: 56, weight: 800, family: 'Inter', fill: C.label, ls: -0.015 })}
-    ${stampAt(lt, 1.2, 'QUALIFIED', C.green, 195, 1440, 40, -9, 61)}
-    ${stampAt(lt, 1.45, 'VANISHED', '#cfc6b6', 885, 1490, 40, 7, 62)}
+    ${stampAt(lt, 1.2, 'QUALIFIED', '#3ddc92', 185, 1500, 42, -9, 61)}
+    ${stampAt(lt, 1.45, 'VANISHED', '#e2dacb', 900, 1420, 42, 6, 62)}
     ${wick(lt, 540, 1600, sc, { mood: 'excited', mouth: lt < 0.9 ? 'wide' : 'closed', flameSize: 1.15 })}
     ${popLine(lt, 0.7, '미국 주식을 매주 한 번,', 540, 1712, { size: 68, weight: 800 })}
     ${popLine(lt, 0.85, '금요일 마감으로만 판정합니다', 540, 1792, { size: 54, weight: 700, fill: C.soft })}
@@ -323,33 +324,38 @@ function miniChart(kind, k) {
 }
 
 // 3. The rule, on the judges' sheet: hold the close = QUALIFIED, slip = VANISHED.
+//    Each case gets its own framed chart panel; stamps land on clean paper in the panel's upper left.
+function chartPanel(y, kind, k) {
+  const x = L, w = W - L - 120, h = 380;
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="26" fill="#ebe2cf" stroke="${C.ink}" stroke-opacity="0.14" stroke-width="3"/>
+    <g transform="translate(${x + 40},${y - 40}) scale(1.85)">${miniChart(kind, k)}</g>`;
+}
 function sceneRule(lt) {
-  const hitA = 1.2, hitB = 2.6;
-  const kA = ease((lt - 0.15) / 0.85), kB = ease((lt - 1.4) / 1.0);
+  const hitA = 1.0, hitB = 2.35;
+  const kA = ease((lt + 0.2) / 0.9), kB = ease((lt - 1.15) / 1.0);
   let mood = 'calm', mouth = 'closed';
   if (lt > hitA && lt < hitB) { mood = 'excited'; mouth = lt < hitA + 0.7 ? 'wide' : 'closed'; }
   if (lt >= hitB && lt < hitB + 1.3) mood = 'gloomy';
   if (lt >= hitB + 1.3) { mood = 'excited'; mouth = 'closed'; }
   const s1 = shake(lt - hitA, 0.3, 11), s2 = shake(lt - hitB, 0.3, 11);
-  const rowA = 470, rowB = 1050;
-  const chartAt = (cy, kind, k) => `<g transform="translate(${L - 30},${cy}) scale(1.6)">${miniChart(kind, k)}</g>`;
+  const pA = 545, pB = 1060;
   return `<g transform="translate(${f1(s1.x + s2.x)},${f1(s1.y + s2.y)})">
     ${paper(0, 0, W, H)}
     ${text('판정은 두 가지뿐', L, 345, { size: 100, weight: 900, fill: C.ink, anchor: 'start' })}
-    ${text('마감까지 버티면', L, rowA + 50, { size: 66, weight: 800, fill: C.ink, anchor: 'start' })}
-    ${chartAt(rowA + 30, 'hold', kA)}
-    ${stampAt(lt, hitA, 'QUALIFIED', C.green, 560, rowA + 480, 66, -8, 11)}
-    <line x1="${L}" y1="${rowB - 56}" x2="${W - 80}" y2="${rowB - 56}" stroke="${C.ink}" stroke-opacity="0.2" stroke-width="3"/>
-    ${text('마감에 밀리면', L, rowB + 50, { size: 66, weight: 800, fill: C.ink, anchor: 'start' })}
-    ${chartAt(rowB + 30, 'fade', kB)}
-    ${stampAt(lt, hitB, 'VANISHED', C.gray, 520, rowB + 480, 66, -6, 23)}
-    ${popLine(lt, 3.0, '중간에 튄 건 판정에 넣지 않습니다', L, 1712, { size: 48, weight: 800, fill: C.inkSoft, anchor: 'start' })}
-    ${wick(lt, 900, 1640, 0.82, { mood, mouth, flameSize: mood === 'gloomy' ? 0.5 : 1 })}
+    ${text('마감까지 버티면', L, pA - 34, { size: 64, weight: 800, fill: C.ink, anchor: 'start' })}
+    ${chartPanel(pA, 'hold', kA)}
+    ${stampAt(lt, hitA, 'QUALIFIED', C.green, L + 250, pA + 92, 54, -8, 11)}
+    ${text('마감에 밀리면', L, pB - 34, { size: 64, weight: 800, fill: C.ink, anchor: 'start' })}
+    ${chartPanel(pB, 'fade', kB)}
+    ${stampAt(lt, hitB, 'VANISHED', C.gray, L + 230, pB + 92, 54, -6, 23)}
+    ${popLine(lt, 2.8, '중간에 튄 건', L, 1600, { size: 60, weight: 900, fill: C.ink, anchor: 'start' })}
+    ${popLine(lt, 2.95, '판정에 넣지 않습니다', L, 1680, { size: 60, weight: 900, fill: C.ink, anchor: 'start' })}
+    ${wick(lt, 930, 1850, 0.62, { mood, mouth, flameSize: mood === 'gloomy' ? 0.5 : 1 })}
   </g>`;
 }
 
 // 4. The week's rhythm: a day cursor walks the rows on the beat and lands on Saturday's confirmed verdict.
-const WEEK = { rowT: (i) => -0.3 + i * 0.12, cur0: 0.55, step: 0.36 };
+const WEEK = { rowT: (i) => -0.3 + i * 0.1, cur0: 0.45, step: 0.34 };
 function sceneWeek(lt) {
   const rows = [['월', '지난 판정 채점'], ['화', '무료 공개 종목 추적'], ['수', '신호가 사라지는 이유'], ['목', '후보 레이스와 투표'], ['금', '마감 직전 예고'], ['토', '이번 주 확정 발표']];
   const satHit = WEEK.cur0 + 5 * WEEK.step;
@@ -357,80 +363,82 @@ function sceneWeek(lt) {
   let s = '';
   rows.forEach(([d, label], i) => {
     if (lt < WEEK.rowT(i)) return;
-    const k = spring(lt - WEEK.rowT(i), { mass: 1, stiffness: 300, damping: 26 }), y = 470 + i * 178, last = i === 5;
+    const k = spring(lt - WEEK.rowT(i), { mass: 1, stiffness: 300, damping: 26 }), y = 500 + i * 186, last = i === 5;
     const dx = (1 - k) * 200, op = clamp((lt - WEEK.rowT(i)) / 0.1);
     if (last) {
       const hk = spring(lt - satHit, SP.heavy), lit = lt >= satHit;
       const sc = lit ? lerp(1.12, 1, hk) : 1;
       s += `<g transform="translate(${f1(dx + 540)},${y}) scale(${sc.toFixed(3)}) translate(-540,${-y})" opacity="${op.toFixed(3)}">
-        <rect x="64" y="${y - 84}" width="952" height="168" rx="40" fill="${lit ? C.green : '#1d2840'}" stroke="${C.green}" stroke-width="4"/>
-        <rect x="100" y="${y - 56}" width="112" height="112" rx="28" fill="${lit ? C.ink : C.green}"/>
-        ${text(d, 156, y + 21, { size: 58, weight: 900, fill: lit ? C.green : C.ink })}
-        ${text(label, 246, y + 25, { size: 72, weight: 900, fill: lit ? C.ink : C.text, anchor: 'start' })}
+        <rect x="64" y="${y - 86}" width="952" height="172" rx="40" fill="${lit ? C.green : '#22304d'}"/>
+        <rect x="100" y="${y - 58}" width="116" height="116" rx="28" fill="${lit ? C.ink : '#2a3350'}" ${lit ? '' : 'stroke="#3b4666" stroke-width="3"'}/>
+        ${text(d, 158, y + 22, { size: 60, weight: 900, fill: lit ? C.green : C.text })}
+        ${text(label, 252, y + 26, { size: 74, weight: 900, fill: lit ? C.ink : '#dfe4ee', anchor: 'start' })}
       </g>`;
     } else {
       const active = i === cur, done = cur > i;
       const ak = active ? spring(lt - (WEEK.cur0 + i * WEEK.step), SP.pop) : 0;
-      const rowOp = done ? 0.62 : 1;
-      s += `<g transform="translate(${f1(dx)},0)" opacity="${(op * rowOp).toFixed(3)}">
-        ${active ? `<rect x="64" y="${y - 76}" width="952" height="152" rx="36" fill="#22304d" transform="translate(540,${y}) scale(${lerp(0.94, 1, ak).toFixed(3)},1) translate(-540,${-y})"/>` : ''}
-        <rect x="100" y="${y - 56}" width="112" height="112" rx="28" fill="${done || active ? '#173a2c' : '#2a3350'}" stroke="${done || active ? C.green : '#3b4666'}" stroke-width="3"/>
-        ${text(d, 156, y + 21, { size: 56, weight: 800, fill: done || active ? '#7fe0b0' : C.text })}
-        ${text(label, 246, y + 23, { size: 66, weight: active ? 900 : 800, fill: '#eef1f7', anchor: 'start' })}
+      s += `<g transform="translate(${f1(dx)},0)" opacity="${op.toFixed(3)}">
+        ${active ? `<rect x="64" y="${y - 80}" width="952" height="160" rx="36" fill="#22304d" stroke="${C.green}" stroke-width="3" transform="translate(540,${y}) scale(${lerp(0.94, 1, ak).toFixed(3)},1) translate(-540,${-y})"/>` : ''}
+        <rect x="100" y="${y - 58}" width="116" height="116" rx="28" fill="${done || active ? '#173a2c' : '#2a3350'}" stroke="${done || active ? C.green : '#3b4666'}" stroke-width="3"/>
+        ${text(d, 158, y + 22, { size: 58, weight: 800, fill: done || active ? '#7fe0b0' : C.text })}
+        ${text(label, 252, y + 24, { size: 68, weight: active ? 900 : 800, fill: done ? '#c8cfdc' : '#eef1f7', anchor: 'start' })}
       </g>`;
     }
   });
   const pk = spring(lt - satHit - 0.3, SP.pop);
-  const pl = lt > satHit + 0.3 ? `<g transform="translate(100,1500) scale(${lerp(0.6, 1, pk).toFixed(3)})" opacity="${clamp((lt - satHit - 0.3) / 0.1).toFixed(3)}">${pill(0, 0, 'CONFIRMED · Weekly close', C.green, { size: 40 })}</g>` : '';
-  const wy = lerp(2400, 1830, spring(lt - satHit + 0.2, SP.bouncy));
-  return `${text('일주일 내내, 규칙대로', 540, 320, { size: 98, weight: 900 })}
+  const pl = lt > satHit + 0.3 ? `<g transform="translate(100,1555) scale(${lerp(0.6, 1, pk).toFixed(3)})" opacity="${clamp((lt - satHit - 0.3) / 0.1).toFixed(3)}">${pill(0, 0, 'CONFIRMED · Weekly close', C.green, { size: 42 })}</g>` : '';
+  const wy = lerp(2400, 1850, spring(lt - satHit + 0.1, SP.bouncy));
+  return `${text('WEEKLY WICK', 1020, 146, { size: 36, weight: 900, family: 'Inter', anchor: 'end', ls: 0.18 })}
+    ${text('일주일 내내, 규칙대로', 60, 340, { size: 98, weight: 900, anchor: 'start' })}
     ${s}${pl}
-    ${wick(lt, 880, wy, 0.74, { mood: lt > satHit ? 'excited' : 'calm', mouth: lt > satHit && lt < satHit + 0.6 ? 'wide' : 'closed', flameSize: 1.1 })}`;
+    ${wick(lt, 900, wy, 0.6, { mood: lt > satHit ? 'excited' : 'calm', mouth: lt > satHit && lt < satHit + 0.6 ? 'wide' : 'closed', flameSize: 1.1 })}`;
 }
 
 // 5. Accountability: every call graded against SPY, misses included.
 function sceneGradedContent(lt) {
-  const hitA = 0.45, hitB = 1.15;
+  const hitA = 0.2, hitB = 0.85;
   let mood = 'calm';
   if (lt > hitA && lt < hitB) mood = 'excited';
-  if (lt >= hitB && lt < hitB + 1.4) mood = 'apology';
+  if (lt >= hitB && lt < hitB + 1.6) mood = 'apology';
   return `${text('틀린 판정도', L, 350, { size: 104, weight: 900, fill: C.ink, anchor: 'start' })}
     ${text('전부 공개합니다', L, 474, { size: 104, weight: 900, fill: C.ink, anchor: 'start' })}
-    ${text('SPY보다 잘했으면', L, 660, { size: 62, weight: 800, fill: C.inkSoft, anchor: 'start' })}
-    ${stampAt(lt, hitA, 'BEAT SPY', C.green, 400, 810, 84, -6, 31)}
-    ${text('SPY보다 못했어도', L, 1010, { size: 62, weight: 800, fill: C.inkSoft, anchor: 'start' })}
-    ${stampAt(lt, hitB, 'TRAILED SPY', C.red, 470, 1160, 84, -4, 47)}
-    ${popLine(lt, 2.2, '모든 판정은 SPY와 비교해 채점', L, 1400, { size: 58, weight: 900, fill: C.ink, anchor: 'start' })}
-    ${popLine(lt, 2.35, '매주 월요일, 결과 그대로', L, 1484, { size: 52, weight: 700, fill: C.inkSoft, anchor: 'start' })}
-    ${wick(lt, 890, 1760, 0.72, { mood, flameSize: mood === 'apology' ? 0.5 : 1 })}`;
-}
-function sceneGraded(lt) {
-  const s1 = shake(lt - 0.45, 0.3, 10), s2 = shake(lt - 1.15, 0.3, 10);
-  return `<g transform="translate(${f1(s1.x + s2.x)},${f1(s1.y + s2.y)})">${paper(0, 0, W, H)}${sceneGradedContent(lt)}</g>`;
+    ${text('SPY보다 잘했으면', L, 640, { size: 60, weight: 800, fill: C.inkSoft, anchor: 'start' })}
+    ${stampAt(lt, hitA, 'BEAT SPY', C.green, L + 250, 770, 66, -6, 31)}
+    ${text('SPY보다 못했어도', L, 960, { size: 60, weight: 800, fill: C.inkSoft, anchor: 'start' })}
+    ${stampAt(lt, hitB, 'TRAILED SPY', C.red, L + 330, 1090, 66, -4, 47)}
+    ${popLine(lt, 1.7, '모든 판정은', L, 1330, { size: 76, weight: 900, fill: C.ink, anchor: 'start' })}
+    ${popLine(lt, 1.85, 'SPY와 비교해 채점', L, 1422, { size: 76, weight: 900, fill: C.ink, anchor: 'start' })}
+    ${popLine(lt, 2.1, '매주 월요일, 결과 그대로', L, 1520, { size: 54, weight: 800, fill: C.inkSoft, anchor: 'start' })}
+    ${wick(lt, 880, 1850, 0.72, { mood, flameSize: mood === 'apology' ? 0.5 : 1 })}`;
 }
 
-// 6. CTA on full-bleed judges' paper: a vertical take on the brand's X header.
+// 6. CTA on full-bleed judges' paper: a vertical take on the brand's X header. It keeps moving:
+//    Wick bounces the whole time, the stamps re-ink on the beat and the button pulses twice.
 function sceneCtaContent(lt) {
-  const sc = lerp(0.55, 1.2, spring(lt + 0.05, SP.soft));
-  const flameS = lerp(0.9, 1.25, spring(lt - 0.2, { mass: 1, stiffness: 120, damping: 8 }));
-  const btnT = 0.75, pk = spring(lt - btnT, SP.pop);
-  // The button pulses twice after it lands so the end card never sits still.
-  const pulse = 1 + 0.07 * Math.max(0, Math.sin(Math.PI * clamp((lt - 2.6) / 0.35))) + 0.07 * Math.max(0, Math.sin(Math.PI * clamp((lt - 4.2) / 0.35)));
-  const cta = lt > btnT ? `<g transform="translate(540,1758) scale(${(lerp(0.6, 1, pk) * pulse).toFixed(3)})" opacity="${clamp((lt - btnT) / 0.1).toFixed(3)}">
-      <rect x="-300" y="-52" width="600" height="124" rx="62" fill="#0d6b40" opacity="0.35"/>
-      <rect x="-300" y="-64" width="600" height="124" rx="62" fill="${C.green}"/>
-      ${text('X에서 팔로우', 0, 20, { size: 60, weight: 900, fill: C.ink, ls: -0.03 })}
+  const sc = lerp(1.0, 1.32, spring(lt + 0.3, SP.soft));
+  const flameS = lerp(0.9, 1.1, spring(lt - 0.2, { mass: 1, stiffness: 120, damping: 8 }));
+  const btnT = 0.6, pk = spring(lt - btnT, SP.pop);
+  const beat = (t0) => Math.max(0, Math.sin(Math.PI * clamp((lt - t0) / 0.35)));
+  const pulse = 1 + 0.08 * (beat(2.0) + beat(3.6));
+  const cta = lt > btnT ? `<g transform="translate(540,1760) scale(${(lerp(0.6, 1, pk) * pulse).toFixed(3)})" opacity="${clamp((lt - btnT) / 0.1).toFixed(3)}">
+      <rect x="-320" y="-50" width="640" height="128" rx="64" fill="#0d6b40" opacity="0.35"/>
+      <rect x="-320" y="-64" width="640" height="128" rx="64" fill="${C.green}"/>
+      ${text('X에서 팔로우', 0, 22, { size: 64, weight: 900, fill: C.ink, ls: -0.03 })}
     </g>` : '';
-  const hop = lt > 2.6 ? -Math.max(0, Math.sin(Math.PI * clamp((lt - 2.6) / 0.4))) * 40 - Math.max(0, Math.sin(Math.PI * clamp((lt - 4.2) / 0.4))) * 40 : 0;
-  return `${text('WEEKLY', 540, 330, { size: 172, weight: 900, family: 'Inter', fill: C.ink, ls: 0.01 })}
-    ${text('WICK', 540, 492, { size: 172, weight: 900, family: 'Inter', fill: C.ink, ls: 0.01 })}
-    ${text('Weekly close or it didn\'t happen.', 540, 590, { size: 50, weight: 800, family: 'Inter', fill: C.inkSoft, ls: -0.015 })}
-    ${stampAt(lt, 0.35, 'QUALIFIED', C.green, 215, 1320, 50, -10, 71)}
-    ${stampAt(lt, 0.55, 'VANISHED', C.gray, 870, 1370, 50, 7, 72)}
-    <g transform="translate(0,${f1(hop)})">${wick(lt, 540, 1440, sc, { mood: 'calm', mouth: lt < 1.2 || (lt > 2.6 && lt < 3.0) || (lt > 4.2 && lt < 4.6) ? 'wide' : 'closed', flameSize: flameS })}</g>
+  return `${text('WEEKLY', 540, 300, { size: 168, weight: 900, family: 'Inter', fill: C.ink, ls: 0.01 })}
+    ${text('WICK', 540, 460, { size: 168, weight: 900, family: 'Inter', fill: C.ink, ls: 0.01 })}
+    ${text('Weekly close or it didn\'t happen.', 540, 552, { size: 48, weight: 800, family: 'Inter', fill: C.inkSoft, ls: -0.015 })}
+    ${stampAt(lt, 0.3, 'QUALIFIED', C.green, 190, 1330, 46, -10, 71)}
+    ${stampAt(lt, 0.5, 'VANISHED', C.gray, 890, 1270, 46, 8, 72)}
+    ${wick(lt, 540, 1440, sc, { mood: 'excited', mouth: lt < 1.0 || beat(2.0) > 0.2 || beat(3.6) > 0.2 ? 'wide' : 'closed', flameSize: flameS })}
     ${text('@weeklywick', 540, 1580, { size: 108, weight: 900, family: 'Inter', fill: C.ink, ls: -0.01 })}
-    ${text('매주 토요일, 이번 주 판정 발표', 540, 1664, { size: 56, weight: 800, fill: C.inkSoft })}
+    ${text('매주 토요일, 이번 주 판정 발표', 540, 1662, { size: 56, weight: 800, fill: C.inkSoft })}
     ${cta}`;
+}
+
+function sceneGraded(lt) {
+  const s1 = shake(lt - 0.2, 0.3, 10), s2 = shake(lt - 0.85, 0.3, 10);
+  return `<g transform="translate(${f1(s1.x + s2.x)},${f1(s1.y + s2.y)})">${paper(0, 0, W, H)}${sceneGradedContent(lt)}</g>`;
 }
 
 // ---------- composition and transitions ----------
@@ -458,9 +466,10 @@ function frame(t) {
       const g = ease(e);
       body += layers.map((l) => l.svg).join(''); layers.length = 0;
       body += paper(0, 0, W, H, { band: 170 * (1 - g) });
-      const eo = clamp(e / 0.5), ei = clamp((e - 0.4) / 0.6);
-      if (eo < 1) body += `<g transform="translate(${f1(-W * 0.5 * easeIn(eo))},0)" opacity="${(1 - easeIn(eo)).toFixed(3)}">${sceneGradedContent(t - S.graded[0])}</g>`;
-      if (ei > 0) body += `<g transform="translate(${f1(W * 0.35 * (1 - easeOut(ei)))},0)" opacity="${easeOut(ei).toFixed(3)}">${sceneCtaContent(lt)}</g>`;
+      // A horizontal push on the same sheet: both pages fully opaque, side by side, never overlapping.
+      const px = W * ease(e);
+      if (e < 1) body += `<g transform="translate(${f1(-px)},0)">${sceneGradedContent(t - S.graded[0])}</g>`;
+      body += `<g transform="translate(${f1(W - px)},0)">${sceneCtaContent(lt)}</g>`;
       continue;
     }
 
@@ -468,10 +477,12 @@ function frame(t) {
     // Entry.
     if (inType === 'cross') { op *= clamp((e - 0.35) / 0.65); }
     if (inType === 'cover') { tr += `translate(0,${f1(H * (1 - ease(e)))}) `; }
+    if (inType === 'slide') { tr += `translate(${f1(W * (1 - ease(e)))},0) `; }
     if (inType === 'uncover') { const s = lerp(0.92, 1, easeOut(e)); op *= easeOut(e); tr += `translate(540,960) scale(${s.toFixed(4)}) translate(-540,-960) `; }
     // Exit.
     if (outType === 'cross') { const s = lerp(1, 1.1, ease(xk)); op *= 1 - clamp(xk / 0.6); tr += `translate(540,700) scale(${s.toFixed(4)}) translate(-540,-700) `; }
-    if (outType === 'cover') { const s = lerp(1, 0.92, ease(xk)); op *= 1 - 0.7 * ease(xk); tr += `translate(540,960) scale(${s.toFixed(4)}) translate(-540,-960) `; }
+    if (outType === 'cover') { const s = lerp(1, 0.92, ease(xk)); op *= 1 - clamp(xk / 0.55); tr += `translate(540,960) scale(${s.toFixed(4)}) translate(-540,-960) `; }
+    if (outType === 'slide') { tr += `translate(${f1(-W * 0.35 * ease(xk))},0) `; op *= 1 - clamp(xk / 0.7); }
     if (outType === 'uncover') { tr += `translate(0,${f1(-H * ease(xk))}) `; }
     if (outType === 'expand' && xk > 0) continue; // the CTA branch draws the outgoing graded copy
     layers.push({ k, inType, svg: `<g transform="${tr}" opacity="${op.toFixed(3)}">${RENDER[k](lt)}</g>` });

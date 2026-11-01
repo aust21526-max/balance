@@ -13,6 +13,7 @@ Best so far: round 0 (pre-cook contact sheet), commit 6th of branch
 - 09:22 Defaults accepted by the user ("기본값으로 진행해줘"): cap 4h, Korean captions kept, code-made sound, cream paper kept as brand.
 - 09:23 References are four renders of the real wick-studio brand code (no third-party clips exist for this run).
 - 09:23 Critics: fresh general-purpose subagents with only images + rubric, 2 per round, median.
+- 09:40 Round times before 09:40 were written from estimates and are corrected; from round 03 on the clock is read at every boundary with `date -u`.
 
 ## User feedback inbox
 
@@ -22,7 +23,7 @@ Best so far: round 0 (pre-cook contact sheet), commit 6th of branch
 
 ## Round 00 (baseline, pre-cook scene)
 
-Time: 09:22 to 09:45 UTC | total elapsed 0.4h
+Time: 09:22 to about 09:28 UTC (not read at the time; corrected from the clock at 09:40) | total elapsed about 0.1h
 Usage: not readable
 Focus: baseline score of the scene made before /cook.
 
@@ -60,7 +61,7 @@ Next focus: first frame, transitions, frame fill and character scale.
 
 ## Round 01
 
-Time: 09:45 to 10:15 UTC | total elapsed 0.9h
+Time: about 09:28 to 09:33 UTC (corrected, see note) | total elapsed about 0.2h
 Usage: not readable
 Focus: first frame + all transitions + frame fill (largest shared gaps from round 00).
 
@@ -106,7 +107,7 @@ Next focus: frame fill and mascot role, static holds, stamp entrance.
 
 ## Round 02
 
-Time: 10:15 to 10:45 UTC | total elapsed 1.4h
+Time: about 09:33 to 09:40 UTC (clock read 09:40) | total elapsed 0.3h
 Focus: composition (frame fill, mascot scale and role) and static holds, the single weakest area named by both critics.
 
 Changes:
@@ -117,3 +118,41 @@ Changes:
 - CTA: stamps by the feet, green button with shadow, two pulse-and-hop beats at 26.9 and 28.5 s so the end card keeps moving.
 - Timing: hook 5.4, brand 3.6, rule 5.1, week 5.0, graded 5.2, CTA 5.7 s; shot table moved to the new scene times.
 - Decision: no star or dust texture on navy, because decorative particles are on the ban list.
+
+Stills: `cook/stills/r02/` | Side by side: `cook/compare/r02/`
+
+Scores, eyeballed: 2 fresh critics, median (shot table now matches the scenes).
+
+| Shot | Comp | Color | Type | Detail |
+|---|---|---|---|---|
+| S01 hook frame 0 | 70 | 81 | 82 | 71 |
+| S02 hook wick | 67 | 81 | 76 | 66 |
+| S03 brand | 83 | 77 | 83 | 78 |
+| S04 rule | 67 | 83 | 76 | 67 |
+| S05 week | 66 | 80 | 76 | 65 |
+| S06 graded | 68 | 78 | 78 | 69 |
+| S07 CTA | 81 | 86 | 83 | 78 |
+
+Video: 6.6 and 6.3 -> median 6.45/10 (first frame 5.5, composition 6.25, color 7.25, motion 6.0, pacing 6.0). Sound not reviewed.
+
+Top gaps from critics:
+1. Empty frame space: middle band of the hook thumbnail, rule charts tiny in thin strips, graded slots empty for 0.5 s.
+2. Same vertical push used for three cuts; 24.0 s double exposure into the CTA.
+3. End card reads static for about 4.5 s.
+4. Hero candle flat (no gloss) next to a glossy mascot; week list has two competing focus states and the mascot hits the 토 bar.
+
+Stop check: bar no | cap not reached | stills approved no | final no -> round 03
+
+## Round 03
+
+Time: 09:40 to 09:52 UTC | total elapsed 0.5h
+Focus: composition density (both critics' single weakest area) and the remaining transition faults.
+
+Changes:
+- Hook starts at the Wednesday peak: frame 0 is a tall glossy green candle, Wick 0.9 and excited, 수 chip lit; the drop, the wick and the flame follow; chips stay on screen.
+- Rule: each case in its own framed chart panel at 1.85x, stamps on clean paper inside the panel, footnote promoted to a 60 px two-line statement.
+- Week: one focus state (the active row), 토 neutral until it lands, wordmark added, mascot below the bar.
+- Graded: stamps land 0.2 and 0.85 s after the cut; key line promoted to 76 px.
+- Transitions: graded now slides in horizontally (cover only used once); CTA entry is a horizontal page push with both pages opaque.
+- CTA: Wick bounces the whole time (excited), stamps by the feet, button pulses and mouth opens on two beats.
+- Timing: hook 4.6, brand 3.8, rule 5.6, week 5.0, graded 5.4, CTA 5.6 s.
