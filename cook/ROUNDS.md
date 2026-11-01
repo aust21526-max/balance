@@ -371,3 +371,12 @@ Changes:
 - Hook: Wick stays defeated to the end of the shot (no happy flip under "꼬리만 남고 끝").
 - One push direction everywhere (week to graded is vertical now).
 - Week: pills at 36 px, inactive cards outlined in their pill color at 35%.
+
+Stills: `cook/stills/r12/` | Side by side: `cook/compare/r12/`
+
+Scores: not measured. Both round 12 critics stopped with an API usage-limit error (monthly spend limit; the 5-hour window resets 13:00 UTC).
+Own check (logged, never decides): the two verified defects from round 11 are fixed in the r12 cut strips (5.37 s brand push-in is built; CTA Wick holds one scale through the push).
+
+Stop check: bar no (best median 7.3/10 at round 08, recent rounds 6.9 to 7.15; bar 9) | cap not reached | stills approved no | final not rendered
+Stopped: usage limit. Resume from round 13 by re-running the critics on cook/compare/r12 once usage is available, or render the final after the user approves the stills.
+Best so far: round 12 build (commit after 1ee432f) for transitions; round 08 had the best critic median.
