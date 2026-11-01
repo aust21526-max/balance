@@ -50,12 +50,12 @@ const S = {
   cta: [24.0, 28.5],
   loop: [28.5, 30],
 };
-const IN = { brand: ['push', 0.4], rule: ['push', 0.4], week: ['push', 0.4], graded: ['pushX', 0.4], verdict: ['shrink', 0.5], cta: ['push', 0.4], loop: ['push', 0.4] };
+const IN = { brand: ['push', 0.4], rule: ['push', 0.4], week: ['push', 0.4], graded: ['push', 0.4], verdict: ['shrink', 0.5], cta: ['push', 0.4], loop: ['push', 0.4] };
 window.SCENES = S;
 
 // Sound cues in scene-local seconds (on the 120 bpm grid), read by scripts/soundtrack.mjs.
 const CUE_TABLE = {
-  hook: [[0.5, 'pop'], [2.0, 'whoosh'], [2.5, 'stamp'], [3.0, 'pop'], [3.5, 'pop'], [4.5, 'pop']],
+  hook: [[0.5, 'pop'], [2.0, 'whoosh'], [2.5, 'stamp'], [3.0, 'pop'], [3.5, 'pop']],
   brand: [[-0.4, 'whoosh'], [0, 'stamp'], [0.25, 'stamp'], [1.0, 'stamp'], [1.5, 'stamp']],
   rule: [[-0.4, 'whoosh'], [0.0, 'stamp'], [0.5, 'stamp'], [1.0, 'pop'], [3.0, 'pop']],
   week: [[-0.4, 'whoosh'], [0.0, 'stamp'], [0.5, 'stamp'], [1.0, 'stamp'], [1.2, 'pop'], [2.0, 'pop']],
@@ -276,7 +276,7 @@ function sceneHook(lt) {
     : popLine(lt, 2.0, '금요일에 밀리면', 540, 345, { size: 120, weight: 900 }) + popLine(lt, 2.2, '꼬리만 남고 끝', 540, 462, { size: 64, weight: 800, fill: '#ff8582' });
 
   // Wick watches the candle: calm, excited on the rise, tense on Thursday, gloomy at the close, then lit.
-  const mood = lt < 2.0 ? 'excited' : lt < 2.5 ? 'tense' : lt < 4.45 ? 'gloomy' : 'excited';
+  const mood = lt < 2.0 ? 'excited' : lt < 2.5 ? 'tense' : 'gloomy';
   const flameK = spring(lt - 3.5, { mass: 1, stiffness: 120, damping: 8 });
   const lean = mood === 'excited' ? 2 : mood === 'gloomy' ? -2 : 0;
 
@@ -291,7 +291,7 @@ function sceneHook(lt) {
       ${candle(cx, open, close, high, Math.max(open, close) + 46, cw, isRed ? C.red : C.green, true)}
       ${flame(lt, cx, high - 6, 0.5 * flameK)}
       ${bracket}
-      <g transform="translate(0,${f1(-60 * Math.max(0, Math.sin(Math.PI * clamp((lt - 4.5) / 0.4))))}) rotate(${lean},235,1580)">${wick(lt, 235, 1580, 1.05, { mood, mouth: mood === 'excited' && (lt < 1.2 || lt > 4.45) ? 'wide' : 'closed', flameSize: mood === 'gloomy' ? 0.5 : 1 })}</g>
+      <g transform="translate(0,0) rotate(${lean},235,1580)">${wick(lt, 235, 1580, 1.05, { mood, mouth: mood === 'excited' && (lt < 1.2 || lt > 4.45) ? 'wide' : 'closed', flameSize: mood === 'gloomy' ? 0.5 : 1 })}</g>
     </g>
     ${chips}
   </g>`;
@@ -299,7 +299,7 @@ function sceneHook(lt) {
 
 // 2. Brand: wordmark slams, Wick stands lit, the two verdict stamps land either side.
 function sceneBrand(lt) {
-  const enter = spring(lt + 0.2, SP.soft);
+  const enter = spring(lt + 0.6, SP.soft);
   const sc = lerp(0.6, 1.42, enter);
   const slam = (str, st, y) => {
     if (lt < st) return '';
@@ -308,13 +308,13 @@ function sceneBrand(lt) {
   };
   const shk = shake(lt, 0.3, 11), shk2 = shake(lt - 1.0, 0.25, 7), shk3 = shake(lt - 1.5, 0.25, 7);
   return `<g transform="translate(${f1(shk.x + shk2.x + shk3.x)},${f1(shk.y + shk2.y + shk3.y)})">
-    ${slam('WEEKLY', -0.1, 330)}${slam('WICK', 0.25, 492)}
-    ${popLine(lt, 0.4, 'Weekly close or it didn\'t happen.', 540, 600, { size: 56, weight: 800, family: 'Inter', fill: C.label, ls: -0.015 })}
+    ${slam('WEEKLY', -0.42, 330)}${slam('WICK', -0.3, 492)}
+    ${popLine(lt, -0.2, 'Weekly close or it didn\'t happen.', 540, 600, { size: 56, weight: 800, family: 'Inter', fill: C.label, ls: -0.015 })}
     ${stampAt(lt, 1.0, 'QUALIFIED', '#3ddc92', 220, 1500, 42, -9, 61)}
     ${stampAt(lt, 1.5, 'VANISHED', '#e2dacb', 870, 1420, 42, 6, 62)}
     ${wick(lt, 540, 1600, sc, { mood: 'excited', mouth: lt < 0.9 ? 'wide' : 'closed', flameSize: 1.15 })}
-    ${popLine(lt, 0.7, '미국 주식을 매주 한 번,', 540, 1712, { size: 68, weight: 800 })}
-    ${popLine(lt, 0.85, '금요일 마감으로만 판정합니다', 540, 1792, { size: 54, weight: 700, fill: C.soft })}
+    ${popLine(lt, 0.25, '미국 주식을 매주 한 번,', 540, 1712, { size: 68, weight: 800 })}
+    ${popLine(lt, 0.4, '금요일 마감으로만 판정합니다', 540, 1792, { size: 54, weight: 700, fill: C.soft })}
   </g>`;
 }
 
@@ -386,11 +386,11 @@ function sceneWeek(lt) {
     const fill = last && lit ? C.green : lit ? '#25314f' : '#1a2236';
     const ink = last && lit ? C.ink : '#eef1f7';
     s += `<g transform="translate(540,${y}) scale(${sc.toFixed(3)}) translate(-540,${-y})">
-      <rect x="54" y="${y - 130}" width="972" height="260" rx="44" fill="${fill}" ${lit && !last ? `stroke="${pc}" stroke-width="4"` : ''}/>
+      <rect x="54" y="${y - 130}" width="972" height="260" rx="44" fill="${fill}" ${lit && !last ? `stroke="${pc}" stroke-width="4"` : lit ? '' : `stroke="${pc}" stroke-opacity="0.35" stroke-width="3"`}/>
       <rect x="96" y="${y - 82}" width="164" height="164" rx="38" fill="${last && lit ? C.ink : lit ? pc : '#2a3350'}"/>
       ${text(d, 178, y + 30, { size: 86, weight: 900, fill: last && lit ? C.green : lit ? C.ink : '#c3cad8' })}
       ${text(label, 300, y - 6, { size: 72, weight: 900, fill: ink, anchor: 'start' })}
-      ${lit ? `<g transform="translate(300,${y + 26})">${pill(0, 0, pl, last ? C.ink : pc, { size: 30 })}</g>`.replace(`fill="${C.ink}" text-anchor="start"`, last ? `fill="${C.green}" text-anchor="start"` : `fill="${C.ink}" text-anchor="start"`) : ''}
+      ${lit ? `<g transform="translate(300,${y + 22})">${pill(0, 0, pl, last ? C.ink : pc, { size: 36 })}</g>`.replace(`fill="${C.ink}" text-anchor="start"`, last ? `fill="${C.green}" text-anchor="start"` : `fill="${C.ink}" text-anchor="start"`) : ''}
     </g>`;
   });
   const hop = -40 * Math.max(0, Math.sin(Math.PI * clamp((lt - 2.0) / 0.45)));
@@ -453,7 +453,7 @@ function sceneVerdictContent(lt) {
 // 7. CTA on full-bleed judges' paper: a vertical take on the brand's X header, with beats so it never sits still.
 const CTA_BEATS = [1.0, 2.0, 3.0, 4.0];
 function sceneCtaContent(lt) {
-  const sc = lerp(1.15, 1.5, spring(lt + 0.3, SP.soft));
+  const sc = lerp(1.15, 1.5, spring(lt + 0.8, SP.soft));
   const beat = (t0, d = 0.45) => Math.max(0, Math.sin(Math.PI * clamp((lt - t0) / d)));
   const b = CTA_BEATS.reduce((m, t0) => Math.max(m, beat(t0)), 0);
   const btnT = 0.5, pk = spring(lt - btnT, SP.pop);

@@ -352,3 +352,22 @@ Changes:
 - Rule and verdict: first stamp on the cut, second half a beat later, closing line at 1.0 s.
 - Hook to brand is now a push like the other navy/paper cuts.
 - CTA 4.5 s with four beats; more air between Wick, the handle and the button.
+
+Stills: `cook/stills/r11/` | Side by side: `cook/compare/r11/`
+
+Video: 7.0 (A) and 6.8 (B) -> median 6.9/10. Sound not reviewed.
+Checked against the cut strips: A's "near-empty frame at 5.37 s" (brand pushes in before its wordmark exists) and "mascot scale jump at 23.87 to 24.00 s" are real; A's "CTA visible at 23.87 s then gone" is not (no button renders before 24.5 s). B's "week scene bottom 45% empty, mascot 120 px" contradicts the full-size S05 (cards to y 1330, Wick about 450 px); B was reading the 12.70 s contact frame before Wick enters. Critic prompts now point to the full-size shot stills.
+
+Stop check: bar no | cap not reached | stills approved no | final no -> round 12
+
+## Round 12
+
+Time: 10:19 to 10:22 UTC (clock) | total elapsed 1.0h
+Focus: the verified transition defects.
+
+Changes:
+- Brand scene is fully built while it pushes in (wordmark, tagline and Wick already on screen), so 5.37 s is no longer empty.
+- CTA Wick reaches its final scale before the push lands (no scale jump at 24.0 s).
+- Hook: Wick stays defeated to the end of the shot (no happy flip under "꼬리만 남고 끝").
+- One push direction everywhere (week to graded is vertical now).
+- Week: pills at 36 px, inactive cards outlined in their pill color at 35%.
