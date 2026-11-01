@@ -293,3 +293,23 @@ Changes:
 - Wick gets a soft ground shadow in every scene.
 - Hook: Wick stays defeated through the tail beat and only lights up on the final hop before the cut.
 - Shrink morph: the card copy crossfades in over the last 20% of the zoom.
+
+Stills: `cook/stills/r08/` | Side by side: `cook/compare/r08/`
+
+Video: 7.3 (A) and 7.3 (B) -> median 7.3/10 (first frame 7.5, composition 7.25, color 8.0, motion 7.0, pacing 7.0). Sound not reviewed. Best so far (+0.45).
+
+Top gaps from critics: back-half holds (verdict card static after stamps, end card about 3 s of identical samples); the grow zoom fills the frame with giant redaction bars before the end card; stamps clipping frame edges in the brand and CTA scenes; "이게" orphaned on its own line; tiny red close body reads as a T; middle-scene elements too small.
+
+Stop check: bar no | cap not reached | stills approved no | final no -> round 09
+
+## Round 09
+
+Time: 10:08 to 10:12 UTC (clock) | total elapsed 0.8h
+Focus: brand fidelity on paper and back-half pacing.
+
+Changes:
+- Found in lib/cards.mjs: on cream the brand uses darker stamp inks (QUALIFIED #1f8a54, VANISHED #6b6457, TRAILED SPY #c0392b). All paper-scene stamps now use them (the source of the recurring "washed out stamps" note).
+- Card to CTA is a 0.3 s card flip instead of zooming the redaction bars.
+- Verdict scene 5.5 s with stamps on beats 1, 3, 5 and Wick popping in after; CTA 4.0 s with three beats and a stamp re-ink.
+- Middle scenes scaled up: verdict card 980 x 1225, larger headlines, Wick larger in rule, week, graded and card.
+- Stamps pulled inside the safe area in the brand and CTA scenes; "이게 윅" on one line with a small "(Wick)" under it; Friday close body 150 px so it reads as a candle body.

@@ -36,6 +36,7 @@ const C = {
   bg: '#0f1320', bg2: '#1a2440', text: '#eef1f7', soft: '#c9d0de', muted: '#8d96a8',
   paper: '#f3ede1', rule: '#dccfb6', margin: '#e07b68', ink: '#1b1f2a', inkSoft: '#3f3a33', inkMuted: '#6b6457',
   green: '#22c47a', red: '#ef5350', gray: '#8a8174', amber: '#ffb020', label: '#ffc23d',
+  inkGreen: '#1f8a54', inkGray: '#6b6457', inkRed: '#c0392b', // stamp inks on paper, as lib/cards.mjs style B
 };
 
 // Scene table (seconds) and the transition into each scene (type, seconds of overlap before the cut).
@@ -45,10 +46,10 @@ const S = {
   rule: [8.5, 12.5],
   week: [12.5, 16.5],
   graded: [16.5, 20.5],
-  verdict: [20.5, 25.0],
-  cta: [25.0, 30],
+  verdict: [20.5, 26.0],
+  cta: [26.0, 30],
 };
-const IN = { brand: ['cut', 0], rule: ['push', 0.4], week: ['push', 0.4], graded: ['pushX', 0.4], verdict: ['shrink', 0.5], cta: ['grow', 0.45] };
+const IN = { brand: ['cut', 0], rule: ['push', 0.4], week: ['push', 0.4], graded: ['pushX', 0.4], verdict: ['shrink', 0.5], cta: ['flip', 0.3] };
 window.SCENES = S;
 
 // Sound cues in scene-local seconds (on the 120 bpm grid), read by scripts/soundtrack.mjs.
@@ -58,8 +59,8 @@ const CUE_TABLE = {
   rule: [[-0.4, 'whoosh'], [0.5, 'stamp'], [1.5, 'stamp'], [2.0, 'pop'], [3.0, 'pop']],
   week: [[-0.4, 'whoosh'], [0.5, 'pop'], [0.75, 'pop'], [1.0, 'pop'], [1.25, 'pop'], [1.5, 'pop'], [1.75, 'stamp'], [2.05, 'pop']],
   graded: [[-0.4, 'whoosh'], [0.0, 'stamp'], [0.5, 'stamp'], [1.0, 'pop'], [2.5, 'pop']],
-  verdict: [[-0.5, 'whoosh'], [0.5, 'stamp'], [1.0, 'stamp'], [1.5, 'stamp'], [2.0, 'pop'], [3.0, 'pop']],
-  cta: [[-0.5, 'whoosh'], [0.25, 'stamp'], [0.5, 'stamp'], [0.5, 'pop'], [1.5, 'pop'], [2.5, 'pop'], [3.5, 'pop'], [4.0, 'stamp'], [4.25, 'stamp']],
+  verdict: [[-0.5, 'whoosh'], [0.5, 'stamp'], [1.5, 'stamp'], [2.5, 'stamp'], [3.0, 'pop'], [4.0, 'pop']],
+  cta: [[-0.5, 'whoosh'], [0.25, 'stamp'], [0.5, 'stamp'], [0.5, 'pop'], [1.0, 'pop'], [2.0, 'pop'], [2.5, 'stamp'], [2.75, 'stamp'], [3.0, 'pop']],
 };
 window.CUES = Object.entries(CUE_TABLE).flatMap(([k, list]) => list.map(([d, kind]) => ({ at: +(S[k][0] + d).toFixed(3), kind })));
 
@@ -222,7 +223,7 @@ const L = 120; // left text edge on paper scenes
 const HOOK = { open: 1420, cx: 560, cw: 210 };
 function hookCandle(lt) {
   // Monday is already done at frame 0; each later day moves the close with its own spring.
-  const steps = [[0.5, -150], [2.0, 300], [2.5, 560]];
+  const steps = [[0.5, -150], [2.0, 300], [2.5, 650]];
   let close = HOOK.open - 640, high = HOOK.open - 660;
   steps.forEach(([st, d]) => {
     const k = spring(lt - st, { mass: 1.2, stiffness: 160, damping: 15 });
@@ -244,15 +245,15 @@ function sceneHook(lt) {
   let bgC = '';
   hist.forEach(([x, o, c, hi, lo]) => { bgC += candle(x, o, c, hi, lo, 62, c < o ? C.green : C.red); });
 
-  const closeY = open + 130, lineK = easeOut((lt - 2.3) / 0.5);
+  const closeY = open + 160, lineK = easeOut((lt - 2.3) / 0.5);
   const closeLine = lineK > 0 ? `<line x1="${f1(540 - 500 * lineK)}" y1="${closeY}" x2="${f1(540 + 500 * lineK)}" y2="${closeY}" stroke="${C.text}" stroke-width="5" stroke-dasharray="20 14" opacity="0.75"/>
     ${text('금요일 마감', 1016, closeY + 52, { size: 42, weight: 800, fill: C.soft, anchor: 'end', opacity: lineK })}` : '';
 
   const bk = spring(lt - 3.0, SP.pop);
   const bracket = lt > 3.0 ? `<g opacity="${clamp((lt - 3.0) / 0.12).toFixed(3)}" transform="translate(${f1(lerp(40, 0, bk))},0)">
       <path d="M ${cx + 140} ${f1(high)} h 30 v ${f1(open - 20 - high)} h -30" fill="none" stroke="${C.label}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
-      ${text('이게', cx + 196, (high + open) / 2 - 18, { size: 66, weight: 900, fill: C.label, anchor: 'start' })}
-      ${text('윅(Wick)', cx + 196, (high + open) / 2 + 58, { size: 66, weight: 900, fill: C.label, anchor: 'start' })}
+      ${text('이게 윅', cx + 196, (high + open) / 2 - 10, { size: 76, weight: 900, fill: C.label, anchor: 'start' })}
+      ${text('(Wick)', cx + 200, (high + open) / 2 + 56, { size: 50, weight: 800, family: 'Inter', fill: C.label, anchor: 'start', ls: 0 })}
     </g>` : '';
 
   let chips = '';
@@ -307,8 +308,8 @@ function sceneBrand(lt) {
   return `<g transform="translate(${f1(shk.x + shk2.x + shk3.x)},${f1(shk.y + shk2.y + shk3.y)})">
     ${slam('WEEKLY', -0.1, 330)}${slam('WICK', 0.25, 492)}
     ${popLine(lt, 0.4, 'Weekly close or it didn\'t happen.', 540, 600, { size: 56, weight: 800, family: 'Inter', fill: C.label, ls: -0.015 })}
-    ${stampAt(lt, 1.0, 'QUALIFIED', '#3ddc92', 185, 1500, 42, -9, 61)}
-    ${stampAt(lt, 1.5, 'VANISHED', '#e2dacb', 900, 1420, 42, 6, 62)}
+    ${stampAt(lt, 1.0, 'QUALIFIED', '#3ddc92', 220, 1500, 42, -9, 61)}
+    ${stampAt(lt, 1.5, 'VANISHED', '#e2dacb', 870, 1420, 42, 6, 62)}
     ${wick(lt, 540, 1600, sc, { mood: 'excited', mouth: lt < 0.9 ? 'wide' : 'closed', flameSize: 1.15 })}
     ${popLine(lt, 0.7, '미국 주식을 매주 한 번,', 540, 1712, { size: 68, weight: 800 })}
     ${popLine(lt, 0.85, '금요일 마감으로만 판정합니다', 540, 1792, { size: 54, weight: 700, fill: C.soft })}
@@ -353,16 +354,16 @@ function sceneRule(lt) {
   const pA = 545, pB = 1060;
   return `<g transform="translate(${f1(s1.x + s2.x)},${f1(s1.y + s2.y)})">
     ${paper(0, 0, W, H)}
-    ${text('판정은 두 가지뿐', L, 345, { size: 100, weight: 900, fill: C.ink, anchor: 'start' })}
+    ${text('판정은 두 가지뿐', L, 350, { size: 110, weight: 900, fill: C.ink, anchor: 'start' })}
     ${text('마감까지 버티면', L, pA - 34, { size: 64, weight: 800, fill: C.ink, anchor: 'start' })}
     ${chartPanel(pA, 'hold', kA)}
-    ${stampAt(lt, hitA, 'QUALIFIED', C.green, L + 250, pA + 92, 54, -8, 11)}
+    ${stampAt(lt, hitA, 'QUALIFIED', C.inkGreen, L + 250, pA + 92, 54, -8, 11)}
     ${text('마감에 밀리면', L, pB - 34, { size: 64, weight: 800, fill: C.ink, anchor: 'start' })}
     ${chartPanel(pB, 'fade', kB)}
-    ${stampAt(lt, hitB, 'VANISHED', C.gray, L + 230, pB + 92, 54, -6, 23)}
+    ${stampAt(lt, hitB, 'VANISHED', C.inkGray, L + 230, pB + 92, 54, -6, 23)}
     ${popLine(lt, 2.0, '중간에 튄 건', L, 1600, { size: 60, weight: 900, fill: C.ink, anchor: 'start' })}
     ${popLine(lt, 2.0, '판정에 넣지 않습니다', L, 1680, { size: 60, weight: 900, fill: C.ink, anchor: 'start' })}
-    <g transform="translate(0,${f1(-50 * Math.max(0, Math.sin(Math.PI * clamp((lt - 3.0) / 0.45))))})">${wick(lt, 930, 1850, 0.62, { mood, mouth, flameSize: mood === 'gloomy' ? 0.5 : 1 })}</g>
+    <g transform="translate(0,${f1(-50 * Math.max(0, Math.sin(Math.PI * clamp((lt - 3.0) / 0.45))))})">${wick(lt, 950, 1860, 0.72, { mood, mouth, flameSize: mood === 'gloomy' ? 0.5 : 1 })}</g>
   </g>`;
 }
 
@@ -403,7 +404,7 @@ function sceneWeek(lt) {
   return `${text('WEEKLY WICK', 1020, 146, { size: 36, weight: 900, family: 'Inter', anchor: 'end', ls: 0.18 })}
     ${text('일주일 내내, 규칙대로', 60, 340, { size: 98, weight: 900, anchor: 'start' })}
     ${s}${pl}
-    ${wick(lt, 905, wy, 0.5, { mood: lt > satHit ? 'excited' : 'calm', mouth: lt > satHit && lt < satHit + 0.6 ? 'wide' : 'closed', flameSize: 1.1 })}`;
+    ${wick(lt, 910, wy, 0.58, { mood: lt > satHit ? 'excited' : 'calm', mouth: lt > satHit && lt < satHit + 0.6 ? 'wide' : 'closed', flameSize: 1.1 })}`;
 }
 
 // 5. Accountability: every call graded against SPY, misses included.
@@ -416,47 +417,47 @@ function sceneGradedContent(lt) {
   return `${text('틀린 판정도', L, 350, { size: 104, weight: 900, fill: C.ink, anchor: 'start' })}
     ${text('전부 공개합니다', L, 474, { size: 104, weight: 900, fill: C.ink, anchor: 'start' })}
     ${text('SPY보다 잘했으면', L, 645, { size: 66, weight: 900, fill: C.ink, anchor: 'start' })}
-    ${stampAt(lt, hitA, 'BEAT SPY', C.green, L + 300, 790, 84, -6, 31)}
+    ${stampAt(lt, hitA, 'BEAT SPY', C.inkGreen, L + 300, 790, 84, -6, 31)}
     ${text('SPY보다 못했어도', L, 985, { size: 66, weight: 900, fill: C.ink, anchor: 'start' })}
-    ${stampAt(lt, hitB, 'TRAILED SPY', C.red, L + 400, 1130, 84, -4, 47)}
+    ${stampAt(lt, hitB, 'TRAILED SPY', C.inkRed, L + 400, 1130, 84, -4, 47)}
     ${popLine(lt, 1.0, '모든 판정은', L, 1370, { size: 76, weight: 900, fill: C.ink, anchor: 'start' })}
     ${popLine(lt, 1.0, 'SPY와 비교해 채점', L, 1462, { size: 76, weight: 900, fill: C.ink, anchor: 'start' })}
     ${popLine(lt, 1.25, '매주 월요일, 결과 그대로', L, 1560, { size: 56, weight: 800, fill: C.inkSoft, anchor: 'start' })}
-    ${wick(lt, 880, 1850, 0.85, { mood, flameSize: 1 })}`;
+    ${wick(lt, 900, 1860, 0.95, { mood, flameSize: 1 })}`;
 }
 
 // 6. The Saturday deliverable: the judges' sheet shrinks into the real brand card (style B) on navy.
 //    Rows are ink-redacted on purpose: the promo shows the product without inventing tickers or numbers.
-const VCARD = { x: 70, y: 520, w: 940, h: 1175 };
+const VCARD = { x: 50, y: 500, w: 980, h: 1225 };
 function cardRect(g) { // g = 0: card on navy, g = 1: full-bleed sheet
   return { x: lerp(VCARD.x, 0, g), y: lerp(VCARD.y, 0, g), w: lerp(VCARD.w, W, g), h: lerp(VCARD.h, H, g), rx: lerp(30, 0, g) };
 }
 function verdictCard(lt) {
   const { x, y } = VCARD;
-  const rows = [[y + 400, 'QUALIFIED', C.green, 0.5], [y + 625, 'QUALIFIED', C.green, 1.0], [y + 850, 'VANISHED', C.gray, 1.5]];
+  const rows = [[y + 410, 'QUALIFIED', C.inkGreen, 0.5], [y + 640, 'QUALIFIED', C.inkGreen, 1.5], [y + 870, 'VANISHED', C.inkGray, 2.5]];
   let s = `${pill(x + 34, y + 28, 'CONFIRMED', C.green, { size: 28 })}
     ${text('이번 주 판정', x + 96, y + 250, { size: 84, weight: 900, fill: C.ink, anchor: 'start' })}`;
   rows.forEach(([ry, label, col, hit], i) => {
     s += `<rect x="${x + 96}" y="${ry - 58}" width="${360 - i * 30}" height="62" rx="10" fill="${C.ink}" filter="url(#inkRough)"/>
       <rect x="${x + 96}" y="${ry + 20}" width="${250 + i * 20}" height="30" rx="8" fill="${C.inkMuted}" opacity="0.55"/>
-      ${stampAt(lt, hit, label, col, x + 690, ry - 8, 56, -7 + i * 2, 80 + i)}`;
+      ${stampAt(lt, hit, label, col, x + 720, ry - 8, 60, -7 + i * 2, 80 + i)}`;
   });
-  const wk = spring(lt - 2.0, SP.bouncy);
-  const hop = -36 * Math.max(0, Math.sin(Math.PI * clamp((lt - 3.0) / 0.45)));
+  const wk = spring(lt - 3.0, SP.bouncy);
+  const hop = -36 * Math.max(0, Math.sin(Math.PI * clamp((lt - 4.0) / 0.45)));
   s += `${text('@weeklywick', x + VCARD.w - 56, y + VCARD.h - 46, { size: 34, weight: 800, family: 'Inter', fill: C.inkSoft, anchor: 'end', ls: 0 })}
-    ${lt > 1.8 ? `<g opacity="${clamp((lt - 1.8) / 0.15).toFixed(3)}" transform="translate(0,${f1(hop + (1 - wk) * 60)})">${wick(lt, x + 170, y + VCARD.h - 18, 0.36, { mood: 'excited', mouth: lt > 2.0 && lt < 2.6 ? 'wide' : 'closed', flameSize: 1.1 })}</g>` : ''}`;
+    ${lt > 2.8 ? `<g opacity="${clamp((lt - 2.8) / 0.15).toFixed(3)}" transform="translate(0,${f1(hop + (1 - wk) * 60)})">${wick(lt, x + 190, y + VCARD.h - 18, 0.46, { mood: 'excited', mouth: lt > 3.0 && lt < 3.6 ? 'wide' : 'closed', flameSize: 1.1 })}</g>` : ''}`;
   return s;
 }
 function sceneVerdictContent(lt) {
   const hop = -46 * Math.max(0, Math.sin(Math.PI * clamp((lt - 3.0) / 0.45)));
   const wy = lerp(2200, 1700, spring(lt - 2.0, SP.bouncy));
-  return `${popLine(lt, -0.1, '판정은 매주 한 장으로', 540, 300, { size: 88, weight: 900 })}
-    ${popLine(lt, 0.05, '통과는 초록, 소멸은 회색 도장', 540, 402, { size: 54, weight: 700, fill: C.soft })}
+  return `${popLine(lt, -0.1, '판정은 매주 한 장으로', 540, 290, { size: 100, weight: 900 })}
+    ${popLine(lt, 0.05, '통과는 초록, 소멸은 회색 도장', 540, 398, { size: 58, weight: 800, fill: C.soft })}
     ${verdictCard(lt)}`;
 }
 
 // 7. CTA on full-bleed judges' paper: a vertical take on the brand's X header, with beats so it never sits still.
-const CTA_BEATS = [1.5, 2.5, 3.5];
+const CTA_BEATS = [1.0, 2.0, 3.0];
 function sceneCtaContent(lt) {
   const sc = lerp(1.15, 1.5, spring(lt + 0.3, SP.soft));
   const beat = (t0, d = 0.45) => Math.max(0, Math.sin(Math.PI * clamp((lt - t0) / d)));
@@ -470,8 +471,8 @@ function sceneCtaContent(lt) {
     </g>` : '';
   return `${text('WEEKLY', 540, 290, { size: 168, weight: 900, family: 'Inter', fill: C.ink, ls: 0.01 })}
     ${text('WICK', 540, 450, { size: 168, weight: 900, family: 'Inter', fill: C.ink, ls: 0.01 })}
-    ${stampAt(lt, lt > 4.0 ? 4.0 : 0.25, 'QUALIFIED', C.green, 215, 1270, 46, -10, 71)}
-    ${stampAt(lt, lt > 4.25 ? 4.25 : 0.5, 'VANISHED', C.gray, 875, 1200, 46, 8, 72)}
+    ${stampAt(lt, lt > 2.5 ? 2.5 : 0.25, 'QUALIFIED', C.inkGreen, 255, 1270, 46, -10, 71)}
+    ${stampAt(lt, lt > 2.75 ? 2.75 : 0.5, 'VANISHED', C.inkGray, 855, 1200, 46, 8, 72)}
     <g transform="translate(0,${f1(-40 * b)}) rotate(${f1(3 * Math.sin(lt * 2.4))},540,1450)">${wick(lt, 540, 1450, sc, { mood: 'excited', mouth: b > 0.2 || lt < 1.0 ? 'wide' : 'closed', flameSize: 1.05 + 0.25 * b + 0.06 * Math.sin(lt * 3.1) })}</g>
     ${text('@weeklywick', 540, 1556, { size: 108, weight: 900, family: 'Inter', fill: C.ink, ls: -0.01 })}
     ${text('매주 토요일, 이번 주 판정 발표', 540, 1632, { size: 56, weight: 800, fill: C.inkSoft })}
@@ -525,22 +526,19 @@ function frame(t) {
       continue;
     }
     if (k === 'cta') {
-      // The card grows back into a full-bleed sheet carrying its own copy, then the CTA lands on the beat.
-      const g = ease(e), r = cardRect(g), sc = r.w / VCARD.w;
+      // Flip: the verdict card turns edge-on, then the full CTA sheet turns face-on.
       body += layers.map((l) => l.svg).join(''); layers.length = 0;
-      if (e < 1) {
-        const cid = `zg${Math.round(r.w)}`, vl = t - S.verdict[0];
-        body += `<clipPath id="${cid}"><rect x="${f1(r.x)}" y="${f1(r.y)}" width="${f1(r.w)}" height="${f1(r.h)}" rx="${f1(r.rx)}"/></clipPath>`;
-        body += `<g opacity="${(1 - clamp(e / 0.3)).toFixed(3)}">${text('판정은 매주 한 장으로', 540, 300, { size: 88, weight: 900 })}${text('통과는 초록, 소멸은 회색 도장', 540, 402, { size: 54, weight: 700, fill: C.soft })}</g>`;
-        body += paper(r.x, r.y, r.w, r.h, { band: 110 * sc, rx: r.rx, shadow: true }).replace('>WEEKLY WICK</text>', '></text>');
-        body += `<g clip-path="url(#${cid})"><g transform="translate(${f1(r.x - VCARD.x * sc)},${f1(r.y - VCARD.y * sc)}) scale(${sc.toFixed(4)})">
-          ${text('WEEKLY WICK', VCARD.x + VCARD.w - 64, VCARD.y + 60, { size: 40, weight: 900, family: 'Inter', fill: C.paper, anchor: 'end', ls: 0.18 })}
-          ${verdictCard(vl)}</g></g>`;
+      if (e < 0.5) {
+        const fx = Math.cos((Math.PI / 2) * ease(e / 0.5));
+        body += `<g transform="translate(540,0) scale(${Math.max(0.001, fx).toFixed(4)},1) translate(-540,0)">
+          ${paper(VCARD.x, VCARD.y, VCARD.w, VCARD.h, { band: 110, rx: 30, shadow: true })}${verdictCard(t - S.verdict[0])}</g>`;
+        const vl = t - S.verdict[0];
+        body += `<g opacity="${(1 - clamp(e / 0.4)).toFixed(3)}">${text('판정은 매주 한 장으로', 540, 290, { size: 100, weight: 900 })}${text('통과는 초록, 소멸은 회색 도장', 540, 398, { size: 58, weight: 800, fill: C.soft })}</g>`;
       } else {
-        body += paper(0, 0, W, H, { band: 0 });
-        body += sceneCtaContent(lt);
+        const fx = Math.sin((Math.PI / 2) * easeOut((e - 0.5) / 0.5));
+        body += `<g transform="translate(540,0) scale(${Math.max(0.001, fx).toFixed(4)},1) translate(-540,0)">${paper(0, 0, W, H, { band: 0 })}${sceneCtaContent(lt)}</g>`;
+        footerDark = fx > 0.5;
       }
-      footerDark = g > 0.5;
       continue;
     }
     if (outType === 'shrink' && xk > 0) continue; // the verdict branch draws the outgoing sheet
