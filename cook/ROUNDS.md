@@ -313,3 +313,23 @@ Changes:
 - Verdict scene 5.5 s with stamps on beats 1, 3, 5 and Wick popping in after; CTA 4.0 s with three beats and a stamp re-ink.
 - Middle scenes scaled up: verdict card 980 x 1225, larger headlines, Wick larger in rule, week, graded and card.
 - Stamps pulled inside the safe area in the brand and CTA scenes; "이게 윅" on one line with a small "(Wick)" under it; Friday close body 150 px so it reads as a candle body.
+
+Stills: `cook/stills/r09/` | Side by side: `cook/compare/r09/`
+
+Video: 6.8 (A) and 7.2 (B) -> median 7.0/10. Regression from round 08 (7.3). Sound not reviewed.
+Why (A): the longer verdict hold (5.5 s), the flip squashing the text, a 4 s end card of near-identical samples, and the CTA repeating the brand-scene stamp layout. Critic B's report had several factual misreads (mascot sizes, frames from the wrong scene) and is weighted lower this round.
+
+Stop check: bar no | cap not reached | stills approved no | final no -> round 10 (fix the regression, keep round 09's real gains)
+
+## Round 10
+
+Time: 10:12 to 10:15 UTC (clock) | total elapsed 0.9h
+Focus: undo what lost points in round 09, keep the brand inks and scale gains.
+
+Changes:
+- Verdict scene back to 4.5 s: stamps on consecutive beats, Wick pops on beat 4, two hops after.
+- Card to CTA: plain vertical push (the flip is gone).
+- CTA 4.0 s without the duplicated stamp pair; three beats.
+- New loop tail (28.5 to 30 s): a push back into the hook's first frame, so the film loops seamlessly on X. Measured: last frame vs frame 0 mean abs diff 0.34/255 (flame flicker only).
+- Week 3.5 s: cursor on eighth notes from the first beat.
+- Retimed: hook 5.5, brand 3.0, rule 4.0, week 3.5, graded 4.0, verdict 4.5, CTA 4.0, loop 1.5 s.
