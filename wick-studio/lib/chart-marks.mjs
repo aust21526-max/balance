@@ -5,6 +5,9 @@
 // Labels as the indicator draws them under the signal bar: orange "MJ TB" / "GEM TB" (both TB), blue "MON".
 // Decoding goes through ffmpeg (already needed for video); without it, no marks and the plain chart.
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 
 const isOrange = (r, g, b) => r > 225 && g > 135 && g < 175 && b < 70;
@@ -68,6 +71,21 @@ function candleTops(img, maxX) {
   return top;
 }
 
+// Lowest candle pixel per column (same vertical-run rule), to see whether price fell below the signal bar.
+function candleBottoms(img, maxX) {
+  const { W, H, px } = img;
+  const bot = new Int32Array(W).fill(-1);
+  for (let x = 0; x < maxX; x++) {
+    let run = 0;
+    for (let y = Math.round(H * 0.9); y > H * 0.05; y--) {
+      const i = (y * W + x) * 3;
+      const r = px[i], g = px[i + 1], b = px[i + 2];
+      if (isUp(r, g, b) || isDown(r, g, b)) { if (++run >= 4) { bot[x] = y + 3; break; } } else run = 0;
+    }
+  }
+  return bot;
+}
+
 /**
  * { W, H, plotRight, latest: [{kind, x, y, w, h}], past: [{kind, x, y, w, h, low: {x,y}, high: {x,y}}] }
  * or null when the image can't be read. Coordinates are image pixels.
@@ -78,6 +96,7 @@ export function chartMarks(path) {
   const { W, H } = img;
   const s = W / 2000;
   const tops = candleTops(img, W - Math.round(70 * s)); // keep clear of the price axis tags
+  const bots = candleBottoms(img, W - Math.round(70 * s));
   let plotRight = 0;
   for (let x = 0; x < W; x++) if (tops[x] >= 0) plotRight = x;
   if (!plotRight) return null;
@@ -94,7 +113,24 @@ export function chartMarks(path) {
     let high = null;
     for (let x = cx; x <= Math.min(plotRight, cx + win); x++) if (tops[x] >= 0 && (!high || tops[x] < high.y)) high = { x, y: tops[x] };
     // Only a clear rise counts: at least 6% of the image height above the signal bar's low.
-    if (high && low.y - high.y > 0.06 * H && high.x > cx + 2) past.push({ ...l, low, high });
+    // Only signals that worked: price rose clearly AND never closed the gap below the signal bar's low on
+    // the way (a dip under it would have hit the stop, so that signal was a loss, not a win).
+    const sigLow = Math.max(...[-2, -1, 0, 1, 2].map((d) => bots[cx + d] ?? -1));
+    let dipped = false;
+    if (high && sigLow > 0) for (let x = cx + Math.round(4 * s); x < high.x; x++) if (bots[x] > sigLow + 0.012 * H) { dipped = true; break; }
+    if (high && !dipped && low.y - high.y > 0.06 * H && high.x > cx + 2) {
+      // The candle tops from the signal bar to that high, for the "trace" style.
+      const path = [];
+      for (let x = cx; x <= high.x; x += Math.max(1, Math.round(3 * s))) if (tops[x] >= 0) path.push([x, tops[x]]);
+      path.push([high.x, high.y]);
+      // Light smoothing so the trace reads as one move, not every wick; both ends stay where they are.
+      const raw = path.map((q) => q[1]);
+      for (let j = 1; j < path.length - 1; j++) {
+        const w = raw.slice(Math.max(0, j - 2), j + 3);
+        path[j] = [path[j][0], w.reduce((t, v) => t + v, 0) / w.length];
+      }
+      past.push({ ...l, low, high, path });
+    }
   }
   // Labels of one signal stack (TB + MON on the same bar): keep one mark per bar.
   const dedup = (arr) => arr.filter((a, i) => !arr.some((b, j) => j < i && Math.abs(b.x + b.w / 2 - (a.x + a.w / 2)) < 14 * s));
@@ -102,10 +138,14 @@ export function chartMarks(path) {
 }
 
 const YEL = '#ffd23f';
+// How earlier signals are drawn: 'arrow' | 'zone' | 'trace' | 'level' (config.json charts.mark_style).
+const MARK_STYLE = (() => {
+  try { return JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'config.json'), 'utf8')).charts?.mark_style ?? 'trace'; } catch { return 'trace'; }
+})();
 const GRN = '#22c55e';
 
 /** SVG overlay in image coordinates. `k` 0..1 fades the past marks in one after another; `focus` 0..1 the latest spotlight. */
-export function marksSvg(m, { k = 1, focus = 1, scale = 1 } = {}) {
+export function marksSvg(m, { k = 1, focus = 1, scale = 1, style = MARK_STYLE } = {}) {
   if (!m) return '';
   const u = (m.W / 2000) * scale; // stroke widths follow the image size
   let s = '';
@@ -115,9 +155,27 @@ export function marksSvg(m, { k = 1, focus = 1, scale = 1 } = {}) {
     const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
     // Per-element opacity: group opacity inside a nested <svg> trips resvg's layer bounds.
     const o = (0.85 * a).toFixed(2);
-    s += `<ellipse cx="${cx}" cy="${cy}" rx="${p.w * 0.85}" ry="${p.h * 1.05}" fill="none" stroke="#1e293b" stroke-opacity="${(0.7 * a).toFixed(2)}" stroke-width="${3.5 * u}"/>
+    const ring = `<ellipse cx="${cx}" cy="${cy}" rx="${p.w * 0.85}" ry="${p.h * 1.05}" fill="none" stroke="#1e293b" stroke-opacity="${(0.7 * a).toFixed(2)}" stroke-width="${3.5 * u}"/>`;
+    if (style === 'zone') {
+      // A soft green box over the stretch from the signal bar to the high that followed.
+      const x0 = cx - 4 * u, x1 = p.high.x + 6 * u, y0 = p.high.y - 8 * u, y1 = p.low.y;
+      s += `<rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" rx="${8 * u}" fill="${GRN}" fill-opacity="${(0.16 * a).toFixed(2)}" stroke="${GRN}" stroke-opacity="${(0.55 * a).toFixed(2)}" stroke-width="${2.5 * u}"/>${ring}`;
+    } else if (style === 'trace') {
+      // The price path itself, traced in green over the candles.
+      const d = p.path.map(([x, y], j) => `${j ? 'L' : 'M'}${x},${y}`).join(' ');
+      s += `${ring}<path d="${d}" fill="none" stroke="${GRN}" stroke-opacity="${(0.35 * a).toFixed(2)}" stroke-width="${14 * u}" stroke-linejoin="round" stroke-linecap="round"/>
+        <path d="${d}" fill="none" stroke="${GRN}" stroke-opacity="${o}" stroke-width="${4 * u}" stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="${p.high.x}" cy="${p.high.y}" r="${7 * u}" fill="${GRN}" fill-opacity="${o}"/>`;
+    } else if (style === 'level') {
+      // A dashed line at the signal bar's level running to the high, and a dot at the high.
+      s += `${ring}<line x1="${cx}" y1="${p.low.y}" x2="${p.high.x}" y2="${p.low.y}" stroke="${GRN}" stroke-opacity="${o}" stroke-width="${3 * u}" stroke-dasharray="${10 * u} ${7 * u}"/>
+        <line x1="${p.high.x}" y1="${p.low.y}" x2="${p.high.x}" y2="${p.high.y}" stroke="${GRN}" stroke-opacity="${o}" stroke-width="${3 * u}"/>
+        <circle cx="${p.high.x}" cy="${p.high.y}" r="${8 * u}" fill="${GRN}" fill-opacity="${o}"/>`;
+    } else {
+      s += `${ring}
       <line x1="${p.low.x}" y1="${p.low.y}" x2="${p.high.x}" y2="${p.high.y + 10 * u}" stroke="${GRN}" stroke-opacity="${o}" stroke-width="${5 * u}" stroke-dasharray="${12 * u} ${8 * u}" stroke-linecap="round"/>
       <path d="M${p.high.x - 13 * u},${p.high.y + 16 * u} L${p.high.x},${p.high.y - 6 * u} L${p.high.x + 13 * u},${p.high.y + 16 * u} Z" fill="${GRN}" fill-opacity="${o}"/>`;
+    }
   });
   if (m.latest.length && focus > 0) {
     const x0 = Math.min(...m.latest.map((l) => l.x)), x1 = Math.max(...m.latest.map((l) => l.x + l.w));

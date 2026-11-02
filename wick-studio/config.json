@@ -21,5 +21,8 @@
   "cards": {
     "style": "B"
   },
-  "members_open": false
+  "members_open": false,
+  "charts": {
+    "mark_style": "trace"
+  }
 }
