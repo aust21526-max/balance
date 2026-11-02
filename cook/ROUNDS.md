@@ -380,3 +380,13 @@ Own check (logged, never decides): the two verified defects from round 11 are fi
 Stop check: bar no (best median 7.3/10 at round 08, recent rounds 6.9 to 7.15; bar 9) | cap not reached | stills approved no | final not rendered
 Stopped: usage limit. Resume from round 13 by re-running the critics on cook/compare/r12 once usage is available, or render the final after the user approves the stills.
 Best so far: round 12 build (commit after 1ee432f) for transitions; round 08 had the best critic median.
+
+## Ship
+
+User approval: "1번으로 최종 렌더 진행해줘" (2026-11-02), approving the round 12 stills.
+Final: `video/weekly-wick-promo/out/weekly-wick-promo.mp4` (not committed: the brief allows code and cook/ only; rebuild with `node scripts/render.mjs video`).
+Measured (ffprobe): h264 1080x1920, 30/1 fps, 900 frames, duration 30.000 s, AAC audio, 7.5 MB. Render 0.399 s per frame.
+Audio (volumedetect): mean -20.5 dB, max -0.4 dB. Code-made sound (wick-studio sfx), not reviewed by ear.
+First frame: `cook/first_frame.png`. 1 fps contact sheet: `cook/final_contact.png`.
+Final quality, eyeballed: best critic median 7.3/10 (round 08); round 12 not scored (usage limit). Below the 9/10 bar; shipped on the user's approval.
+Gate: stills approved yes | final render done, file checked.
