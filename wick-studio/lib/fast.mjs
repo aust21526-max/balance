@@ -118,8 +118,10 @@ function chartScene(L, seg, lt, wick) {
   s += slamText(tx, col.y, `$${sig.symbol}`, big, lt - 0.12);
   if (sig.company && !seg.chart) s += `<text x="${tx}" y="${col.y + 70}" font-family="Inter" font-size="40" font-weight="600" fill="${COLORS.muted}" text-anchor="middle" fill-opacity="${clamp((lt - 0.3) / 0.2).toFixed(2)}">${esc(sig.company)}</text>`;
   const by = col.y + (seg.chart ? 90 : 170);
-  if (sig.status === 'QUALIFIED') s += stampBadge(tx, by, 'QUALIFIED', COLORS.qualified, COLORS.ink, 40, lt - 0.45);
-  if (sig.status === 'CANDIDATE') s += stampBadge(tx, by, 'CANDIDATE', COLORS.candidate, COLORS.ink, 40, lt - 0.45);
+  // A name that vanished at the weekly close keeps status CANDIDATE in the packet; the stamp says what happened.
+  if (sig.weekly_close === 'vanished' || sig.publish === 'free post: vanished log') s += stampBadge(tx, by, 'VANISHED', '#94a3b8', COLORS.ink, 40, lt - 0.45);
+  else if (sig.status === 'QUALIFIED') s += stampBadge(tx, by, 'QUALIFIED', COLORS.qualified, COLORS.ink, 40, lt - 0.45);
+  else if (sig.status === 'CANDIDATE') s += stampBadge(tx, by, 'CANDIDATE', COLORS.candidate, COLORS.ink, 40, lt - 0.45);
   if (sig.earnings_caution) s += stampBadge(tx, by + 92, 'EARNINGS WEEK', COLORS.earnings, '#fff', 34, lt - 0.7);
   const pop = spring(lt - 0.2);
   s += wickAt(L.side.x, L.side.y + (1 - pop) * 300, L.side.s, wick);
@@ -208,7 +210,9 @@ function aboutScene(L, seg, lt, wick, t) {
   const tag = pill(0, 0, 'WHAT THEY DO', { bg: HL, size: 30 });
   const tk = easeOutBack(lt / 0.3);
   s += `<g transform="translate(${x0 + (1 - tk) * -200},${top})">${tag.svg}</g>`;
-  s += `<text x="${x0}" y="${top + 150}" font-family="Inter" font-size="${L.land ? 96 : 88}" font-weight="900" fill="${COLORS.text}" fill-opacity="${clamp((lt - 0.1) / 0.15).toFixed(2)}">${esc(sig.company ?? sig.symbol)}</text>`;
+  // Long company names shrink to fit the line (Inter Black ≈ 0.62 em per character).
+  const nameSize = Math.min(L.land ? 96 : 88, Math.floor(maxW / (String(sig.company ?? sig.symbol).length * 0.62)));
+  s += `<text x="${x0}" y="${top + 150}" font-family="Inter" font-size="${nameSize}" font-weight="900" fill="${COLORS.text}" fill-opacity="${clamp((lt - 0.1) / 0.15).toFixed(2)}">${esc(sig.company ?? sig.symbol)}</text>`;
   s += `<text x="${x0}" y="${top + 210}" font-family="Inter" font-size="40" font-weight="800" fill="${COLORS.muted}" fill-opacity="${clamp((lt - 0.2) / 0.15).toFixed(2)}">$${esc(sig.symbol)}</text>`;
   // Accent bar grows down the left edge.
   const barH = 360 * easeOutCubic((lt - 0.2) / 0.4);
