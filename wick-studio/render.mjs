@@ -319,12 +319,14 @@ async function renderPending({ wickDir, days }) {
 }
 
 const opts = args();
-if (opts.pending) process.exit((await renderPending(opts)) ? 1 : 0);
-try {
+// exitCode instead of process.exit(): on Windows, output piped to a log can be cut off by an
+// immediate exit, so the run looked like it stopped after a card with no summary line.
+if (opts.pending) process.exitCode = (await renderPending(opts)) ? 1 : 0;
+else try {
   if (opts.card) renderCard(opts);
   else await renderVideo(opts);
 } catch (err) {
   writeError(opts.queueDir, opts.date, err);
   console.error(`render failed — see ${join(opts.queueDir, 'error.md')}\n${err.message}`);
-  process.exit(1);
+  process.exitCode = 1;
 }
