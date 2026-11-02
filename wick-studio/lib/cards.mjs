@@ -133,14 +133,14 @@ function bigCount(style, x, y, n, label, sub, stacked = false) {
 function chartStrip(x, y, w, h, path) {
   return `<clipPath id="cc"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="20"/></clipPath>
     <image href="${dataUri(path)}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice" clip-path="url(#cc)"/>
-    <rect x="${x + w - 270}" y="${y + h - 48}" width="256" height="34" rx="8" fill="#000" fill-opacity="0.75"/>
-    <text x="${x + w - 142}" y="${y + h - 24}" font-family="Inter" font-size="20" font-weight="700" fill="#fff" text-anchor="middle">Charts by TradingView</text>`;
+    <rect x="${x + 14}" y="${y + h - 48}" width="256" height="34" rx="8" fill="#000" fill-opacity="0.75"/>
+    <text x="${x + 142}" y="${y + h - 24}" font-family="Inter" font-size="20" font-weight="700" fill="#fff" text-anchor="middle">Charts by TradingView</text>`; // bottom-left, clear of Wick
 }
 
 function verdictBody(style, L, card, y0) {
   const S = STYLES[style];
   const C = columns(L, y0, 230);
-  let s = bigCount(style, C.sx, C.sy, card.stats.qualified, 'QUALIFIED', 'this week', L.W > L.H);
+  let s = bigCount(style, C.sx, C.sy, card.stats.qualified, 'QUALIFIED', 'at the weekly close', L.W > L.H);
   const blurbLines = (row) => (row.blurb ? wrap(row.blurb, 32, C.rw - STAMP_COL - 20, 0.55).slice(0, 4) : []);
   const fullH = (row) => { const n = blurbLines(row).length; return 160 + (n ? 46 + (n - 1) * 40 : 0); };
   // Up to five free picks: full rows with the company blurb when they fit, otherwise compact rows
