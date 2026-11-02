@@ -11,6 +11,7 @@
 // On failure the reason is written to queue/<date>/error.md and the exit code is 1.
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { blinkAt } from './characters/rig.mjs';
@@ -53,6 +54,16 @@ function args() {
     style: styleAt >= 0 ? flags[styleAt + 1] : CFG.cards.style,
   };
 }
+
+// After a successful render the old error.md is overwritten with a short "resolved" note instead of
+// being deleted: deleting a file on the Google Drive for desktop drive (G:) silently killed the
+// Windows run right after the render (no "done:" / summary line, later jobs skipped). Writing works there.
+function clearError(queueDir, what) {
+  const p = join(queueDir, 'error.md');
+  if (!existsSync(p) || !isFailure(p)) return;
+  try { writeFileSync(p, `# Resolved\n\nThe ${what} rendered fine at ${new Date().toISOString()}; the earlier failure no longer applies.\n`); } catch { /* leave it */ }
+}
+const isFailure = (p) => { try { return readFileSync(p, 'utf8').startsWith('# Render failed'); } catch { return false; } };
 
 function writeError(queueDir, date, err) {
   mkdirSync(queueDir, { recursive: true });
@@ -172,7 +183,9 @@ async function renderVideo({ date, wickDir, queueDir, wide }) {
 
   const { width: W, height: H } = wide ? CFG.sizes.landscape : CFG.sizes.vertical;
   const L = layout(W, H);
-  const work = join(queueDir, '.work');
+  // Scratch files (voice clips, mix) go to the local temp folder, not the Drive queue folder:
+  // deleting them on the Google Drive drive (G:) silently ended the Windows run.
+  const work = join(tmpdir(), 'weekly-wick-work', date);
   console.log(`[1/4] voice (${CFG.tts.engine}:${CFG.tts.voice})`);
   const wavs = synthesize(ROOT, CFG.tts, script.segments.map((s) => s.text), work);
   const clips = wavs.map(readWav);
@@ -241,7 +254,7 @@ async function renderVideo({ date, wickDir, queueDir, wide }) {
   writeFileSync(join(queueDir, 'thumb.png'), svgToPng(fastFrame(L, { ...thumbState, chunk: null, wick: { ...thumbState.wick, mouth: 'closed', blink: 0 } })));
 
   rmSync(work, { recursive: true, force: true });
-  rmSync(join(queueDir, 'error.md'), { force: true });
+  clearError(queueDir, 'video');
   for (const w of warnings) console.warn(`warning: ${w}`);
   console.log(`done: ${mp4}`);
 }
@@ -258,7 +271,7 @@ function renderCard({ date, wickDir, queueDir, wide, style }) {
   if (errors.length) throw new RenderError(errors, warnings);
   const out = join(queueDir, 'card.png');
   writeFileSync(out, svgToPng(renderCardSvg(card, { style, size: wide ? 'wide' : 'portrait', handle: CFG.handle })));
-  rmSync(join(queueDir, 'error.md'), { force: true });
+  clearError(queueDir, 'card');
   for (const w of warnings) console.warn(`warning: ${w}`);
   console.log(`done: ${out}`);
 }
@@ -301,7 +314,8 @@ async function renderPending({ wickDir, days }) {
       const packet = findPacket(wickDir, date, packetTypeFor(job.kind === 'card' ? { template: peekCard(job.input) } : { scriptType: peekScript(job.input) }));
       const newestInput = Math.max(mtime(job.input), packet ? mtime(packet) : 0, job.extra);
       if (mtime(job.output) >= newestInput) continue; // up to date
-      if (mtime(join(queueDir, 'error.md')) >= newestInput) continue; // already failed on these inputs
+      const errPath = join(queueDir, 'error.md');
+      if (mtime(errPath) >= newestInput && isFailure(errPath)) continue; // already failed on these inputs
       const opts = { date, wickDir, queueDir, wide: false, style: CFG.cards.style };
       console.log(`== ${date} ${job.kind}`);
       try {
