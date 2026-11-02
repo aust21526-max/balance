@@ -145,6 +145,7 @@ function cuesFor(placed, count) {
         cues.push({ at: s + 0.5, kind: 'stamp' });
         break;
       case 'end': cues.push({ at: s + 0.05, kind: 'stamp' }, { at: s + 0.25, kind: 'stamp' }); break;
+      case 'board': cues.push({ at: s + 0.1, kind: 'stamp' }, ...[0, 1, 2].map((k) => ({ at: s + 0.8 + k * 0.25, kind: 'pop' }))); break;
       default: break;
     }
   });
@@ -176,7 +177,9 @@ async function renderVideo({ date, wickDir, queueDir, wide }) {
   const flameSize = flameSizeFor(count);
   placed.forEach((p, i) => {
     Object.assign(p, viewFor(p.seg, packet, queueDir));
-    p.kind = sceneKind({ ...p.seg, signal: p.signal, chart: p.chart, about: p.seg.onScreen.about }, i, count);
+    // ON-SCREEN "TOP 10" / "BASKET" with no ticker shows the packet's returns board.
+    p.board = !p.signal && packet.top10_board && /\b(top\s*10|top ten|basket)\b/i.test(p.seg.onScreen.raw) ? packet.top10_board : null;
+    p.kind = sceneKind({ ...p.seg, signal: p.signal, chart: p.chart, about: p.seg.onScreen.about, board: p.board }, i, count);
     p.chunks = chunkWords(p.seg.text, p.voiceStart, p.voiceEnd);
   });
 
@@ -200,7 +203,7 @@ async function renderVideo({ date, wickDir, queueDir, wide }) {
     const mood = p.kind === 'end' ? 'excited' : p.seg.mood;
     return {
       type: script.type, t, total, count,
-      seg: { kind: p.kind, start: p.sceneStart, dur: p.until - p.sceneStart, signal: p.signal, chart: p.chart, mood, text: p.seg.text },
+      seg: { kind: p.kind, start: p.sceneStart, dur: p.until - p.sceneStart, signal: p.signal, chart: p.chart, board: p.board, mood, text: p.seg.text },
       chunk: chunkAt(p.chunks, t),
       wick: { t, mood, mouth: mouthFor(level, ch), blink: blinkAt(t), flameSize, up },
     };

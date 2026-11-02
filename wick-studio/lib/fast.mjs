@@ -189,9 +189,11 @@ function endScene(L, seg, lt, wick) {
   const { W } = L;
   const tx = L.land ? W / 2 - 220 : W / 2;
   const cy = L.land ? 360 : 420;
-  let s = slamText(tx, cy, 'FULL LIST', 150, lt - 0.05);
-  s += slamText(tx, cy + 150, 'FOR MEMBERS', 110, lt - 0.25, HL);
-  s += `<text x="${tx}" y="${cy + 240}" font-family="Inter" font-size="40" font-weight="700" fill="${COLORS.muted}" text-anchor="middle" fill-opacity="${clamp((lt - 0.5) / 0.3).toFixed(2)}">Weekly close or it didn't happen.</text>`;
+  // The members line only when the script talks about members (not before the site opens).
+  const members = /\bmember/i.test(seg.text ?? '');
+  let s = members ? slamText(tx, cy, 'FULL LIST', 150, lt - 0.05) + slamText(tx, cy + 150, 'FOR MEMBERS', 110, lt - 0.25, HL)
+    : slamText(tx, cy, 'WEEKLY CLOSE', 130, lt - 0.05) + slamText(tx, cy + 140, 'OR IT DIDN\u2019T HAPPEN', 74, lt - 0.25, HL);
+  s += `<text x="${tx}" y="${cy + 240}" font-family="Inter" font-size="40" font-weight="700" fill="${COLORS.muted}" text-anchor="middle" fill-opacity="${clamp((lt - 0.5) / 0.3).toFixed(2)}">${members ? 'Weekly close or it didn\'t happen.' : '@weeklywick'}</text>`;
   const pop = spring(lt - 0.15, { stiffness: 200, damping: 11 });
   const at = L.land ? { x: W - 380, y: L.H - 90, s: 0.85 } : { x: W / 2, y: 1450, s: 0.7 };
   s += wickAt(at.x, at.y + (1 - pop) * 400, at.s, wick);
@@ -234,9 +236,45 @@ function aboutScene(L, seg, lt, wick, t) {
   return s;
 }
 
+// Returns board: the packet's top10_board (a past week's member rank 1-10 at their graded returns),
+// always with the in-profit count and the SPY comparison beside the leaders.
+const pct = (v, unit = '%') => `${v > 0 ? '+' : v < 0 ? '\u2212' : ''}${Math.abs(v).toFixed(1)}${unit}`;
+const toneOf = (v) => (v > 0 ? '#22c55e' : v < 0 ? '#ef5350' : COLORS.muted);
+function boardScene(L, seg, lt, wick) {
+  const b = seg.board;
+  const { W } = L;
+  const cx = L.land ? W * 0.3 : W / 2;
+  const top = L.land ? 200 : 300;
+  const op = (d) => clamp((lt - d) / 0.25).toFixed(2);
+  let s = `<text x="${cx}" y="${top}" font-family="Inter" font-size="${L.land ? 40 : 44}" font-weight="800" fill="${HL}" text-anchor="middle" fill-opacity="${op(0)}" letter-spacing="2">${esc(b.label ?? 'TOP 10 BASKET')}</text>`;
+  if (b.avg_ret_pct !== undefined) s += slamText(cx, top + (L.land ? 220 : 250), pct(b.avg_ret_pct), L.land ? 200 : 230, lt - 0.1, toneOf(b.avg_ret_pct));
+  s += `<text x="${cx}" y="${top + (L.land ? 290 : 330)}" font-family="Inter" font-size="40" font-weight="700" fill="${COLORS.text}" text-anchor="middle" fill-opacity="${op(0.35)}">avg per signal${b.as_of ? ` \u00b7 ${esc(b.as_of)}` : ''}</text>`;
+  const facts = [];
+  if (b.in_profit !== undefined && b.signals) facts.push(`${b.in_profit} of ${b.signals} in profit`);
+  if (b.avg_vs_spy_pp !== undefined) facts.push(`${pct(b.avg_vs_spy_pp, 'pp')} vs SPY`);
+  s += `<text x="${cx}" y="${top + (L.land ? 360 : 410)}" font-family="Inter" font-size="${L.land ? 44 : 48}" font-weight="800" fill="#fff" text-anchor="middle" fill-opacity="${op(0.55)}">${esc(facts.join('  \u00b7  '))}</text>`;
+  const leaders = (b.leaders ?? []).slice(0, 3);
+  const lx = L.land ? W * 0.68 : W / 2;
+  const ly = L.land ? 300 : top + 560;
+  const rowH = L.land ? 150 : 150;
+  leaders.forEach((r, i) => {
+    const k = spring(lt - 0.8 - i * 0.25);
+    const y = ly + i * rowH;
+    s += `<g transform="translate(${lx},${y}) scale(${k.toFixed(3)})">
+      <rect x="-400" y="-70" width="800" height="120" rx="26" fill="#000" fill-opacity="0.45" stroke="${HL}" stroke-opacity="0.6" stroke-width="3"/>
+      <text x="-360" y="20" font-family="Inter" font-size="64" font-weight="900" fill="#fff">$${esc(r.symbol)}</text>
+      <text x="360" y="20" font-family="Inter" font-size="64" font-weight="900" fill="${toneOf(r.ret_pct)}" text-anchor="end">${pct(r.ret_pct)}</text></g>`;
+  });
+  if (b.footnote) s += `<text x="${L.land ? lx : W / 2}" y="${ly + leaders.length * rowH + 10}" font-family="Inter" font-size="32" font-weight="600" fill="${COLORS.muted}" text-anchor="middle" fill-opacity="${op(1.6)}">${esc(b.footnote)}</text>`;
+  const pop = spring(lt - 0.15);
+  s += wickAt(L.side.x, L.side.y + (1 - pop) * 300, L.side.s, wick);
+  return s;
+}
+
 export function sceneKind(seg, i, count) {
   if (i === 0) return 'hero';
   if (seg.isEnd) return 'end';
+  if (seg.board) return 'board';
   if (seg.signal && seg.about && seg.signal.company_blurb) return 'about';
   if (seg.signal && seg.signal.earnings_caution && /earnings/i.test(seg.text) && !seg.chart) return 'earnings';
   if (seg.signal) return 'chart';
@@ -259,6 +297,7 @@ export function fastFrame(L, st) {
     case 'about': body = aboutScene(L, seg, lt, st.wick, t); break;
     case 'count': body = countScene(L, seg, lt, st.wick, st.count); break;
     case 'end': body = endScene(L, seg, lt, st.wick); break;
+    case 'board': body = boardScene(L, seg, lt, st.wick); break;
     default: body = lineScene(L, seg, lt, st.wick, st.chunk, t);
   }
   const bottomCap = seg.kind === 'hero' || seg.kind === 'line' || seg.kind === 'about' ? '' : caption(st.chunk, { x: L.W / 2, ...L.cap }, t);
