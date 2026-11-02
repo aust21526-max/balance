@@ -3,7 +3,7 @@
 //   B "Judges' sheet": cream ruled paper, worn ink stamps — stands out in a dark feed.
 // Layout, margins and Wick's spot are fixed per size so the account is recognisable;
 // only the content and Wick's mood change week to week.
-import { chartMarks, focusRect, markedChart } from './chart-marks.mjs';
+import { chartMarks, focusRect, markedChart, moveNoteSvg, signalMove } from './chart-marks.mjs';
 import { drawWick } from '../characters/rig.mjs';
 import { rng } from './motion.mjs';
 import { dataUri } from './scene.mjs';
@@ -131,14 +131,14 @@ function bigCount(style, x, y, n, label, sub, stacked = false) {
   return s;
 }
 
-function chartStrip(x, y, w, h, path) {
+function chartStrip(x, y, w, h, path, sig = null) {
   // With the signal labels found: the right part of the chart, the latest signal ringed and earlier
   // signals marked with the rise that followed. Otherwise the plain centre crop.
   const m = chartMarks(path);
   const img = m ? `<g clip-path="url(#cc)">${markedChart({ x, y, w, h }, dataUri(path), m, focusRect(m, w / h, 0.6))}</g>`
     : `<image href="${dataUri(path)}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice" clip-path="url(#cc)"/>`;
   return `<clipPath id="cc"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="20"/></clipPath>
-    ${img}
+    ${img}${moveNoteSvg(signalMove(sig), x + 16, y + 16, Math.min(0.75, h / 300 * 0.75))}
     <rect x="${x + 14}" y="${y + h - 48}" width="256" height="34" rx="8" fill="#000" fill-opacity="0.75"/>
     <text x="${x + 142}" y="${y + h - 24}" font-family="Inter" font-size="20" font-weight="700" fill="#fff" text-anchor="middle">Charts by TradingView</text>`; // bottom-left, clear of Wick
 }
@@ -163,7 +163,7 @@ function verdictBody(style, L, card, y0) {
     // Portrait: strip under the count. Wide: under the count in the left column.
     // (Wide: below the stacked count, clear of the footer line.)
     if (L.W > L.H) s += chartStrip(C.sx, C.sy + 365, C.sw, Math.min(150, L.footY - 45 - (C.sy + 365)), card.chart);
-    else if (chart) s += chartStrip(C.rx, C.ry, L.bodyW, 300, card.chart);
+    else if (chart) s += chartStrip(C.rx, C.ry, L.bodyW, 300, card.chart, card.chartSignal);
   }
   let y = start();
   for (const row of card.rows) {

@@ -169,7 +169,7 @@ export function resolveCard(card, packet, queueDir, history = []) {
       const sym = String(card.chart).toUpperCase();
       if (!out.rows.some((r) => r.symbol === sym)) errors.push(`chart: ${sym} must also be one of the card items`);
       else if (!existsSync(chartPath(queueDir, sym))) warnings.push(`chart: no charts/${sym}.png yet — card made without it; it re-renders when the snapshot is added`);
-      else out.chart = chartPath(queueDir, sym);
+      else { out.chart = chartPath(queueDir, sym); out.chartSignal = signalFor(packet, sym); }
     }
   }
 

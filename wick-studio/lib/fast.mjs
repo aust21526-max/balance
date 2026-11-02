@@ -4,7 +4,7 @@ import { drawWick } from '../characters/rig.mjs';
 import { clamp, easeOutBack, easeOutCubic, lerp, rng, shake, spring } from './motion.mjs';
 import { COLORS, dataUri, pill } from './scene.mjs';
 import { esc, wrap } from './text.mjs';
-import { focusRect, markedChart } from './chart-marks.mjs';
+import { focusRect, markedChart, moveNoteSvg, signalMove } from './chart-marks.mjs';
 
 const HL = '#ffd23f'; // active-word highlight
 const ACCENT = { excited: '#22c47a', calm: '#4c8dff', tense: '#ffb020', gloomy: '#ef5350', apology: '#ef5350' };
@@ -108,6 +108,7 @@ function chartScene(L, seg, lt, wick) {
       <clipPath id="cc"><rect x="${B.x}" y="${B.y}" width="${B.w}" height="${B.h}" rx="26"/></clipPath>
       <rect x="${B.x - 6}" y="${B.y - 6}" width="${B.w + 12}" height="${B.h + 12}" rx="30" fill="${COLORS.qualified}" fill-opacity="0.5"/>
       <g clip-path="url(#cc)">${markedChart(B, dataUri(seg.chart), m, view, { k: clamp((lt - 0.4) / Math.max(0.5, 0.4 * seg.dur)), focus: clamp((f - 0.58) / 0.1) })}</g>
+      ${moveNoteSvg(signalMove(sig), B.x + 24, B.y + 24, 1, clamp((f - 0.65) / 0.08))}
       <rect x="${B.x + B.w - 300}" y="${B.y + B.h - 54}" width="282" height="38" rx="10" fill="#000" fill-opacity="0.75"/>
       <text x="${B.x + B.w - 159}" y="${B.y + B.h - 27}" font-family="Inter" font-size="22" font-weight="700" fill="#fff" text-anchor="middle">Charts by TradingView</text>
     </g>`;

@@ -2,19 +2,10 @@
 // point at them: the latest signal (right edge) gets the spotlight, earlier ones a subtle ring and
 // an arrow to the high that followed, drawn only where the chart itself shows that rise.
 //
-// Labels as the indicator draws them under the signal bar: orange "MJ TB" / "GEM TB", blue "MON".
+// Labels as the indicator draws them under the signal bar: orange "MJ TB" / "GEM TB" (both TB), blue "MON".
 // Decoding goes through ffmpeg (already needed for video); without it, no marks and the plain chart.
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-// "MJ TB" and "GEM TB" labels are the same orange and about the same size, so earlier orange labels
-// are only marked once the screenshots are taken with GEM labels hidden (config.json charts.gem_labels_hidden).
-// Blue MON labels are always marked.
-const GEM_HIDDEN = (() => {
-  try { return JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'config.json'), 'utf8')).charts?.gem_labels_hidden === true; } catch { return false; }
-})();
 
 const isOrange = (r, g, b) => r > 225 && g > 135 && g < 175 && b < 70;
 const isBlue = (r, g, b) => b > 225 && r < 90 && g > 85 && g < 125;
@@ -97,7 +88,7 @@ export function chartMarks(path) {
   const latest = labels.filter((l) => l.x + l.w / 2 >= latestFrom);
   const past = [];
   const win = Math.round(0.07 * plotRight); // roughly the next half year on a 10+ year weekly chart
-  for (const l of labels.filter((l) => l.x + l.w / 2 < latestFrom && (l.kind === 'MON' || GEM_HIDDEN))) {
+  for (const l of labels.filter((l) => l.x + l.w / 2 < latestFrom && true)) {
     const cx = Math.round(l.x + l.w / 2);
     const low = { x: cx, y: l.y - Math.round(8 * s) };
     let high = null;
@@ -156,4 +147,28 @@ export function markedChart({ x, y, w, h }, href, m, view, opts = {}) {
   return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#fff"/>
     <g transform="translate(${tx.toFixed(2)},${ty.toFixed(2)}) scale(${sc.toFixed(5)})">
     <image href="${href}" x="0" y="0" width="${m.W}" height="${m.H}"/>${marksSvg(m, { ...opts, scale: Math.max(1, (v.w / m.W) * 1.6) })}</g>`;
+}
+
+/**
+ * The signal week's move for a TB: alert price -> confirmed weekly close (packet price_at_fire and
+ * weekly_close_detail "closed X ..."). This is the bar that confirmed the TB, shown as such.
+ */
+export function signalMove(sig) {
+  if (!sig || sig.type !== 'TB') return null;
+  const from = Number(sig.price_at_fire);
+  const to = Number(String(sig.weekly_close_detail ?? '').match(/closed\s+([\d.]+)/)?.[1]);
+  if (!(from > 0) || !(to > 0)) return null;
+  return { from, to, pct: (to / from - 1) * 100 };
+}
+
+/** Label box for signalMove, top-left at x,y in screen pixels, `k` = size factor, `op` = opacity. */
+export function moveNoteSvg(move, x, y, k = 1, op = 1) {
+  if (!move || op <= 0) return '';
+  const pct = `${move.pct >= 0 ? '+' : '\u2212'}${Math.abs(move.pct).toFixed(1)}%`;
+  const col = move.pct >= 0 ? GRN : '#ef5350';
+  const w = 470 * k, h = 150 * k;
+  return `<g opacity="${op.toFixed(2)}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${16 * k}" fill="#0a0c14" fill-opacity="0.92" stroke="${YEL}" stroke-width="${4 * k}"/>
+    <text x="${x + 24 * k}" y="${y + 44 * k}" font-family="Inter" font-size="${32 * k}" font-weight="900" fill="${YEL}">TB SIGNAL FIRED</text>
+    <text x="${x + 24 * k}" y="${y + 88 * k}" font-family="Inter" font-size="${30 * k}" font-weight="800" fill="#fff">$${move.from.toFixed(2)}  \u2192  $${move.to.toFixed(2)}</text>
+    <text x="${x + 24 * k}" y="${y + 130 * k}" font-family="Inter" font-size="${30 * k}" font-weight="900" fill="${col}">${pct} by the weekly close</text></g>`;
 }
