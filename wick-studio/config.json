@@ -20,5 +20,9 @@
   "handle": "@weeklywick",
   "cards": {
     "style": "B"
+  },
+  "members_open": false,
+  "charts": {
+    "gem_labels_hidden": false
   }
 }

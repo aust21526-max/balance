@@ -18,6 +18,7 @@ import { frameEnvelope, readWav, synthesize, writeWav } from './lib/audio.mjs';
 import { findPacket, flameSizeFor, loadPacket, packetTypeFor, qualifiedCount, signalFor, weekDirection } from './lib/packet.mjs';
 import { rasterInOrder } from './lib/pool.mjs';
 import { svgToPng } from './lib/raster.mjs';
+import { chartMarks } from './lib/chart-marks.mjs';
 import { chunkAt, chunkWords, fastFrame, layout, sceneKind } from './lib/fast.mjs';
 import { resolveCard } from './lib/card-data.mjs';
 import { renderCardSvg } from './lib/cards.mjs';
@@ -62,6 +63,13 @@ function writeError(queueDir, date, err) {
 }
 
 // Who is on screen during a segment: first ticker shown, its chart if requested.
+// Signal labels on a chart screenshot (lib/chart-marks.mjs), found once per file.
+const marksCache = new Map();
+function marksFor(path) {
+  if (!marksCache.has(path)) marksCache.set(path, chartMarks(path));
+  return marksCache.get(path);
+}
+
 function viewFor(seg, packet, queueDir) {
   const sym = seg.onScreen.tickers[0];
   const signal = sym ? signalFor(packet, sym) : null;
@@ -177,6 +185,7 @@ async function renderVideo({ date, wickDir, queueDir, wide }) {
   const flameSize = flameSizeFor(count);
   placed.forEach((p, i) => {
     Object.assign(p, viewFor(p.seg, packet, queueDir));
+    p.marks = p.chart ? marksFor(p.chart) : null;
     // ON-SCREEN "TOP 10" / "BASKET" with no ticker shows the packet's returns board.
     p.board = !p.signal && packet.top10_board && /\b(top\s*10|top ten|basket)\b/i.test(p.seg.onScreen.raw) ? packet.top10_board : null;
     p.kind = sceneKind({ ...p.seg, signal: p.signal, chart: p.chart, about: p.seg.onScreen.about, board: p.board }, i, count);
@@ -203,7 +212,7 @@ async function renderVideo({ date, wickDir, queueDir, wide }) {
     const mood = p.kind === 'end' ? 'excited' : p.seg.mood;
     return {
       type: script.type, t, total, count,
-      seg: { kind: p.kind, start: p.sceneStart, dur: p.until - p.sceneStart, signal: p.signal, chart: p.chart, board: p.board, mood, text: p.seg.text },
+      seg: { kind: p.kind, start: p.sceneStart, dur: p.until - p.sceneStart, signal: p.signal, chart: p.chart, marks: p.marks, board: p.board, mood, text: p.seg.text },
       chunk: chunkAt(p.chunks, t),
       wick: { t, mood, mouth: mouthFor(level, ch), blink: blinkAt(t), flameSize, up },
     };

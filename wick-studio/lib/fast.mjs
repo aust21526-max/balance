@@ -4,6 +4,7 @@ import { drawWick } from '../characters/rig.mjs';
 import { clamp, easeOutBack, easeOutCubic, lerp, rng, shake, spring } from './motion.mjs';
 import { COLORS, dataUri, pill } from './scene.mjs';
 import { esc, wrap } from './text.mjs';
+import { focusRect, markedChart } from './chart-marks.mjs';
 
 const HL = '#ffd23f'; // active-word highlight
 const ACCENT = { excited: '#22c47a', calm: '#4c8dff', tense: '#ffb020', gloomy: '#ef5350', apology: '#ef5350' };
@@ -97,7 +98,20 @@ function chartScene(L, seg, lt, wick) {
   let s = '';
   const inK = easeOutCubic(lt / 0.3);
   const dx = (1 - inK) * L.W * 0.6;
-  if (seg.chart) {
+  if (seg.chart && seg.marks) {
+    // Whole chart first with earlier signals marked (and the rise after each), then zoom to this week's signal.
+    const m = seg.marks, f = lt / Math.max(1, seg.dur);
+    const z = easeOutCubic(clamp((f - 0.45) / 0.2));
+    const v1 = focusRect(m, B.w / B.h);
+    const view = { x: lerp(0, v1.x, z), y: lerp(0, v1.y, z), w: lerp(m.W, v1.w, z), h: lerp(m.H, v1.h, z) };
+    s += `<g transform="translate(${dx.toFixed(1)},0)">
+      <clipPath id="cc"><rect x="${B.x}" y="${B.y}" width="${B.w}" height="${B.h}" rx="26"/></clipPath>
+      <rect x="${B.x - 6}" y="${B.y - 6}" width="${B.w + 12}" height="${B.h + 12}" rx="30" fill="${COLORS.qualified}" fill-opacity="0.5"/>
+      <g clip-path="url(#cc)">${markedChart(B, dataUri(seg.chart), m, view, { k: clamp((lt - 0.4) / Math.max(0.5, 0.4 * seg.dur)), focus: clamp((f - 0.58) / 0.1) })}</g>
+      <rect x="${B.x + B.w - 300}" y="${B.y + B.h - 54}" width="282" height="38" rx="10" fill="#000" fill-opacity="0.75"/>
+      <text x="${B.x + B.w - 159}" y="${B.y + B.h - 27}" font-family="Inter" font-size="22" font-weight="700" fill="#fff" text-anchor="middle">Charts by TradingView</text>
+    </g>`;
+  } else if (seg.chart) {
     const z = 1.12 - 0.08 * clamp(lt / Math.max(1, seg.dur));
     const cx = B.x + B.w / 2, cy = B.y + B.h / 2;
     s += `<g transform="translate(${dx.toFixed(1)},0)">

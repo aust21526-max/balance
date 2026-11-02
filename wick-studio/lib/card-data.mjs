@@ -18,9 +18,9 @@
 import { existsSync } from 'node:fs';
 import { packetNumbers, publicSymbols, qualifiedCount, signalFor, signals, weekDirection } from './packet.mjs';
 import { MOODS } from './script.mjs';
-import { chartPath } from './validate.mjs';
+import { chartPath, membersWord } from './validate.mjs';
 
-export const TEMPLATES = ['verdict', 'results', 'race', 'track', 'anatomy'];
+export const TEMPLATES = ['verdict', 'results', 'race', 'track', 'anatomy', 'basket'];
 const BANNED = /\b(scores?|scored|ranked|ranking|rank|top pick|number one|highest|best|guarantee[sd]?|sure thing|must buy|buy now|buy|sell)\b|#\s?1\b/i;
 const PRICE_OR_PCT = /%|\bpercent\b|\$\s?\d|\d+(\.\d+)?\s?(usd|dollars?)\b/i;
 const words = (s) => String(s ?? '').trim().split(/\s+/).filter(Boolean).length;
@@ -103,6 +103,8 @@ function resolveAnatomy(card, errors, warnings) {
     if (!text) continue;
     const bad = text.match(BANNED);
     if (bad) errors.push(`card.json ${field}: "${bad[0]}" — scores, rankings and advice wording are not allowed`);
+    const mem = membersWord(text);
+    if (mem) errors.push(`card.json ${field}: "${mem}" — the members site isn't open yet; don't mention members (config.json members_open)`);
     if (/\d/.test(text)) errors.push(`card.json ${field}: the anatomy card is an illustration — no numbers`);
     if (/\$[A-Z]/.test(text)) errors.push(`card.json ${field}: the anatomy card names no stocks`);
   }
@@ -131,6 +133,8 @@ export function resolveCard(card, packet, queueDir, history = []) {
     if (!text) continue;
     const bad = text.match(BANNED);
     if (bad) errors.push(`card.json ${field}: "${bad[0]}" — scores, rankings and advice wording are not allowed`);
+    const mem = membersWord(text);
+    if (mem) errors.push(`card.json ${field}: "${mem}" — the members site isn't open yet; don't mention members (config.json members_open)`);
     if (PRICE_OR_PCT.test(text)) errors.push(`card.json ${field}: no prices or % in card text — result % for free picks is printed from the packet by the renderer`);
     for (const m of text.matchAll(/\d+(?:\.\d+)?/g)) if (!numbers.has(m[0])) errors.push(`card.json ${field}: number "${m[0]}" is not in the packet`);
   }
@@ -138,8 +142,8 @@ export function resolveCard(card, packet, queueDir, history = []) {
   const items = Array.isArray(card.items) ? card.items : [];
   const out = {
     template: t, title: card.title, subtitle: card.subtitle ?? '',
-    type: { verdict: 'weekly_confirm', results: 'results', track: 'track' }[t] ?? 'candidate_race',
-    mood: card.mood ?? { verdict: 'excited', results: 'calm', race: 'tense', track: 'calm' }[t] ?? 'calm',
+    type: { verdict: 'weekly_confirm', results: 'results', track: 'track', basket: 'basket' }[t] ?? 'candidate_race',
+    mood: card.mood ?? { verdict: 'excited', results: 'calm', race: 'tense', track: 'calm', basket: 'excited' }[t] ?? 'calm',
     flameSize: null, up: weekDirection(packet).up, rows: [], chart: null, stats: {},
   };
 
@@ -193,6 +197,21 @@ export function resolveCard(card, packet, queueDir, history = []) {
     const finals = out.rows.filter((r) => !PARTIAL.has(r.stamp));
     const losses = finals.filter((r) => r.stamp === 'STOPPED OUT').length;
     if (!card.mood && losses > finals.length - losses) out.mood = 'apology';
+  }
+
+  // Top-10 basket: the packet's top10_board (every week's member rank 1-10 at their latest grade),
+  // printed as given. Up to three leaders, always beside the in-profit count and the SPY comparison.
+  if (t === 'basket') {
+    const b = packet.top10_board;
+    if (!b || num(b.avg_ret_pct) === null || !num(b.signals)) errors.push('basket card: packet.top10_board is missing or empty');
+    else {
+      out.stats.board = { label: b.label ?? 'TOP 10 BASKET', asOf: b.as_of ?? null, signals: num(b.signals), inProfit: num(b.in_profit), avgRet: num(b.avg_ret_pct), vsSpy: num(b.avg_vs_spy_pp), footnote: b.footnote ?? null };
+      out.rows = (Array.isArray(b.leaders) ? b.leaders : []).slice(0, 3).map((l) => ({ symbol: String(l.symbol).split(':').pop().toUpperCase(), ret: num(l.ret_pct) })).filter((r) => r.ret !== null);
+      if (out.stats.board.inProfit === null) errors.push('basket card: top10_board.in_profit is required (leaders are never shown without it)');
+      if (out.stats.board.avgRet < 0 && !card.mood) out.mood = 'gloomy';
+    }
+    if (items.length) errors.push('basket card: leaders come from packet.top10_board — remove items');
+    if (card.chart) errors.push('basket card must not show a chart');
   }
 
   if (t === 'track') {

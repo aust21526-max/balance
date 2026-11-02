@@ -1,7 +1,7 @@
 // GROK PACKET helpers. Field names follow 그록봇_운영지침.md §5; anything not listed
 // there is read defensively and reported as a warning when missing.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 
 // The packet for a queue date is the newest packets/<YYYY-MM-DD>.json on or before it.
 // With `type`, the newest packet of that packet_type from the 7 days up to the date wins
@@ -24,7 +24,7 @@ export function findPacket(wickDir, date, type = null) {
 
 // Which packet_type a card template or script type is built from (null = newest packet).
 export function packetTypeFor({ template, scriptType }) {
-  if (template === 'verdict' || scriptType === 'weekly_confirm' || scriptType === 'deep_dive') return 'weekly_verdict';
+  if (template === 'verdict' || template === 'basket' || scriptType === 'weekly_confirm' || scriptType === 'deep_dive') return 'weekly_verdict';
   if (template === 'results' || scriptType === 'results') return 'monday_confirm';
   return null;
 }
@@ -52,8 +52,18 @@ export function normalizePacket(p) {
   return out;
 }
 
+// The Saturday Top-10 board is written by its own task to wick/boards/<date>.json (beside wick/packets/),
+// so the packet itself stays as the daily run wrote it. It is attached here when the packet has none.
 export function loadPacket(path) {
-  return normalizePacket(JSON.parse(readFileSync(path, 'utf8')));
+  const p = JSON.parse(readFileSync(path, 'utf8'));
+  const board = join(dirname(dirname(path)), 'boards', basename(path));
+  if (!p.top10_board && existsSync(board)) {
+    try {
+      const b = JSON.parse(readFileSync(board, 'utf8'));
+      p.top10_board = b.top10_board ?? b;
+    } catch { /* an unreadable board is skipped; the basket scene/card then reports it missing */ }
+  }
+  return normalizePacket(p);
 }
 
 export const signals = (p) => (Array.isArray(p.signals) ? p.signals : []);

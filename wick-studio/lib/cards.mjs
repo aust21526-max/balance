@@ -3,6 +3,7 @@
 //   B "Judges' sheet": cream ruled paper, worn ink stamps — stands out in a dark feed.
 // Layout, margins and Wick's spot are fixed per size so the account is recognisable;
 // only the content and Wick's mood change week to week.
+import { chartMarks, focusRect, markedChart } from './chart-marks.mjs';
 import { drawWick } from '../characters/rig.mjs';
 import { rng } from './motion.mjs';
 import { dataUri } from './scene.mjs';
@@ -13,7 +14,7 @@ export const SIZES = { portrait: { W: 1080, H: 1350 }, wide: { W: 1600, H: 900 }
 const DISCLAIMER = 'Not financial advice';
 // Cards that print result figures carry the longer line (추가지침_성과공개.md §4).
 const DISCLAIMER_RESULTS = "Past results don't guarantee future results. Not financial advice.";
-const showsFigures = (card) => (card.rows ?? []).some((r) => r.resultPct != null || r.takePct != null) || card.stats?.scorecard?.avgRet != null;
+const showsFigures = (card) => (card.rows ?? []).some((r) => r.resultPct != null || r.takePct != null) || card.stats?.scorecard?.avgRet != null || card.stats?.board != null;
 
 const STYLES = {
   A: { name: 'Scoreboard', bg: '#10141f', fg: '#eef1f7', muted: '#9aa3b5', panel: '#1a2030', rule: '#2a3142', band: '#1a2030', bandFg: '#eef1f7', ink: false },
@@ -24,7 +25,7 @@ const STAMP_COLORS = {
   B: { QUALIFIED: '#1f8a54', VANISHED: '#6b6457', 'EARNINGS WEEK': '#d9631e', 'TAKE-PROFIT': '#1f8a54', 'FIRST TARGET': '#1f7f74', 'SECOND TARGET': '#1f8a54', 'STOPPED OUT': '#c0392b', 'TRAILING EXIT': '#2763c4', CANDIDATES: '#b7791f', 'BEAT SPY': '#1f8a54', 'TRAILED SPY': '#c0392b', 'STILL OPEN': '#b7791f' },
 };
 const STAMP_COL = 330; // right-hand column that holds a row's stamps
-const HEADER = { verdict: 'WEEKLY VERDICT', results: 'EXIT REPORT', race: 'CANDIDATE RACE', track: 'PICK TRACKER', anatomy: 'SIGNAL ANATOMY' };
+const HEADER = { verdict: 'WEEKLY VERDICT', results: 'EXIT REPORT', race: 'CANDIDATE RACE', track: 'PICK TRACKER', anatomy: 'SIGNAL ANATOMY', basket: 'TOP 10 BASKET' };
 
 let uid = 0;
 export function stamp(style, label, x, y, size, rot = -7) {
@@ -55,9 +56,9 @@ export function stamp(style, label, x, y, size, rot = -7) {
 // (closed trades, nothing left to confirm), TRACKED on Tuesday's free-pick follow-up,
 // LIVE on weekday race cards.
 function statusPill(style, type, x, y) {
-  const kind = type === 'weekly_confirm' ? 'confirmed' : type === 'results' ? 'graded' : type === 'track' ? 'tracked' : type === 'anatomy' ? 'explainer' : 'live';
-  const label = { confirmed: 'CONFIRMED · Weekly close', graded: 'GRADED · Exit report', tracked: 'TRACKED · Every free pick', explainer: 'HOW IT WORKS · Illustration', live: 'LIVE · Confirms at Friday close' }[kind];
-  const bg = { confirmed: '#22c47a', graded: '#7fb2ff', tracked: '#7fb2ff', explainer: '#d9d2c3', live: '#ffb020' }[kind];
+  const kind = type === 'basket' ? 'basket' : type === 'weekly_confirm' ? 'confirmed' : type === 'results' ? 'graded' : type === 'track' ? 'tracked' : type === 'anatomy' ? 'explainer' : 'live';
+  const label = { basket: 'GRADED · Weekly close', confirmed: 'CONFIRMED · Weekly close', graded: 'GRADED · Exit report', tracked: 'TRACKED · Every free pick', explainer: 'HOW IT WORKS · Illustration', live: 'LIVE · Confirms at Friday close' }[kind];
+  const bg = { basket: '#7fb2ff', confirmed: '#22c47a', graded: '#7fb2ff', tracked: '#7fb2ff', explainer: '#d9d2c3', live: '#ffb020' }[kind];
   const live = kind === 'live';
   const size = 24, padX = 18, h = 44, w = textWidth(label, size, 0.62) + padX * 2 + (live ? 22 : 0);
   return `<g><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}" fill="${bg}"/>
@@ -131,8 +132,13 @@ function bigCount(style, x, y, n, label, sub, stacked = false) {
 }
 
 function chartStrip(x, y, w, h, path) {
+  // With the signal labels found: the right part of the chart, the latest signal ringed and earlier
+  // signals marked with the rise that followed. Otherwise the plain centre crop.
+  const m = chartMarks(path);
+  const img = m ? `<g clip-path="url(#cc)">${markedChart({ x, y, w, h }, dataUri(path), m, focusRect(m, w / h, 0.6))}</g>`
+    : `<image href="${dataUri(path)}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice" clip-path="url(#cc)"/>`;
   return `<clipPath id="cc"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="20"/></clipPath>
-    <image href="${dataUri(path)}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice" clip-path="url(#cc)"/>
+    ${img}
     <rect x="${x + 14}" y="${y + h - 48}" width="256" height="34" rx="8" fill="#000" fill-opacity="0.75"/>
     <text x="${x + 142}" y="${y + h - 24}" font-family="Inter" font-size="20" font-weight="700" fill="#fff" text-anchor="middle">Charts by TradingView</text>`; // bottom-left, clear of Wick
 }
@@ -240,6 +246,33 @@ function resultsBody(style, L, card, y0) {
     y += rowH;
   }
   if (extra) s += `<text x="${C.rx}" y="${y + 40}" font-family="Inter" font-size="32" font-weight="800" fill="${S.muted}">+${extra} more on the record</text>`;
+  return s;
+}
+
+function basketBody(style, L, card, y0) {
+  const S = STYLES[style];
+  const b = card.stats.board;
+  const split = L.W > L.H;
+  const C = columns(L, y0, 330);
+  const tone = (v) => (v > 0 ? '#16a34a' : v < 0 ? '#dc2626' : S.muted);
+  // The wide summary column is narrow: label and facts go one short piece per line there.
+  const label = split ? b.label.split(' · ') : [b.label];
+  const facts = split
+    ? [`avg per signal${b.asOf ? ` · ${b.asOf}` : ''}`, `${b.inProfit} of ${b.signals} in profit`, b.vsSpy != null ? `${signed(b.vsSpy, 'pp')} vs SPY` : null].filter(Boolean)
+    : [`avg per signal${b.asOf ? ` · ${b.asOf}` : ''}`, `${b.inProfit} of ${b.signals} in profit${b.vsSpy != null ? ` · ${signed(b.vsSpy, 'pp')} vs SPY` : ''}`];
+  let s = `<rect x="${C.sx}" y="${C.sy}" width="${C.sw}" height="${split ? 460 : 300}" rx="18" fill="${S.panel}"/>`;
+  label.forEach((t, i) => { s += `<text x="${C.sx + 30}" y="${C.sy + 50 + i * 34}" font-family="Inter" font-size="${split ? 24 : 26}" font-weight="800" fill="${S.muted}" letter-spacing="3">${esc(t)}</text>`; });
+  const by = C.sy + (split ? 200 : 175);
+  s += `<text x="${C.sx + 26}" y="${by}" font-family="Inter" font-size="${split ? 110 : 130}" font-weight="900" fill="${tone(b.avgRet)}">${signed(b.avgRet, '%')}</text>`;
+  facts.forEach((f, i) => { s += `<text x="${C.sx + 30}" y="${by + 50 + i * 46}" font-family="Inter" font-size="${i ? (split ? 32 : 36) : 26}" font-weight="${i ? 900 : 700}" fill="${i ? S.fg : S.muted}">${esc(f)}</text>`; });
+  let y = split ? C.ry : C.sy + 340;
+  const rowH = Math.min(130, (L.footY - 90 - y) / Math.max(1, card.rows.length));
+  for (const r of card.rows) {
+    s += `<line x1="${C.rx}" y1="${y}" x2="${C.rx + C.rw}" y2="${y}" stroke="${S.rule}" stroke-width="3"/>
+      <text x="${C.rx}" y="${y + rowH * 0.62}" font-family="Inter" font-size="60" font-weight="900" fill="${S.fg}">$${esc(r.symbol)}</text>
+      <text x="${C.rx + C.rw - (split ? 0 : 230)}" y="${y + rowH * 0.62}" text-anchor="end" font-family="Inter" font-size="56" font-weight="900" fill="${tone(r.ret)}">${signed(r.ret, '%')}</text>`;
+    y += rowH;
+  }
   return s;
 }
 
@@ -360,7 +393,7 @@ export function renderCardSvg(card, { style = 'A', size = 'portrait', handle = '
   const L = layout(size);
   const f = frame(style, L, card, handle);
   // The tracker lists past free picks with their latest grade: the exit report's row layout.
-  const body = { verdict: verdictBody, results: resultsBody, race: raceBody, track: resultsBody, anatomy: anatomyBody }[card.template](style, L, card, f.bodyY);
+  const body = { verdict: verdictBody, results: resultsBody, race: raceBody, track: resultsBody, anatomy: anatomyBody, basket: basketBody }[card.template](style, L, card, f.bodyY);
   // The portrait anatomy card is a full-height diagram; Wick would sit on its second panel.
   const mascot = card.template === 'anatomy' && L.W < L.H ? '' : wick(L, card);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${L.W}" height="${L.H}" viewBox="0 0 ${L.W} ${L.H}">${f.svg}${body}${mascot}</svg>`;

@@ -1,9 +1,21 @@
 // Pre-render checks (handoff §3 "렌더 전 자동 점검"). Returns { errors, warnings }.
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { packetNumbers, publicSymbols, signalFor, weekDirection } from './packet.mjs';
 
 // Scores and rankings are never shown; advice/guarantee language is never used.
+// Until the members site opens (config.json "members_open"), public posts don't mention members or a paid list.
+const MEMBERS_OPEN = (() => {
+  try { return JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'config.json'), 'utf8')).members_open === true; } catch { return false; }
+})();
+const MEMBERS = /\b(members?|membership|subscribers?|subscribe|subscription|paid list|full list)\b/i;
+export function membersWord(text) {
+  if (MEMBERS_OPEN) return null;
+  const m = String(text ?? '').match(MEMBERS);
+  return m ? m[0] : null;
+}
+
 const BANNED = /\b(scores?|scored|ranked|ranking|rank|top pick|number one|highest|best pick|guarantee[sd]?|sure thing|must buy|buy now)\b|#\s?1\b/i;
 
 // ABOUT segments show the packet's company_blurb: one plain-language line, no figures.
@@ -43,6 +55,8 @@ export function validate({ script, packet, queueDir }) {
     const shown = [seg.text, ...seg.onScreen.other].join(' ');
     const bad = shown.match(BANNED);
     if (bad) errors.push(`${where}: "${bad[0]}" — scores, rankings and advice/guarantee wording are not allowed`);
+    const mem = membersWord(shown);
+    if (mem) errors.push(`${where}: "${mem}" — the members site isn't open yet; don't mention members or a full/paid list (config.json members_open)`);
 
     for (const m of shown.matchAll(/\d+(?:\.\d+)?/g)) {
       if (!numbers.has(m[0])) errors.push(`${where}: number "${m[0]}" is not in the packet`);

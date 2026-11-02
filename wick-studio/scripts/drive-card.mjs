@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const QUEUE = process.env.WICK_QUEUE_FOLDER || '1q07qiHOETaJy4oWKOqmu1J-_jYJrCzQQ';
 const PACKETS = process.env.WICK_PACKETS_FOLDER || '1jqIJx5F6W7_fCJewLTNmUKMBe0JlqSJY';
+const BOARDS = process.env.WICK_BOARDS_FOLDER || '1Js6B_7fvy1NoY9L80Vo01_ZmnFz4dVsx';
 const API = 'https://www.googleapis.com/drive/v3';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3';
 const FOLDER = 'application/vnd.google-apps.folder';
@@ -85,6 +86,13 @@ for (const f of await list(PACKETS)) {
   if (!/^\d{4}-\d{2}-\d{2}\.json$/.test(f.name) || f.name.slice(0, 10) > date || f.name.slice(0, 10) < from) continue;
   await download(f, join(wick, 'packets', f.name));
   packets++;
+}
+
+// Saturday Top-10 boards (basket card), same window as the packets.
+mkdirSync(join(wick, 'boards'));
+for (const f of await list(BOARDS)) {
+  if (!/^\d{4}-\d{2}-\d{2}\.json$/.test(f.name) || f.name.slice(0, 10) > date || f.name.slice(0, 10) < from) continue;
+  await download(f, join(wick, 'boards', f.name));
 }
 
 const mtime = (p) => (existsSync(p) ? statSync(p).mtimeMs : 0);
