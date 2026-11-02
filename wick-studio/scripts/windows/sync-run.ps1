@@ -5,13 +5,16 @@
 # time to sync the new files after the PC wakes. On battery, or outside that window, it runs once.
 Add-Type -Namespace WeeklyWick -Name Power -MemberDefinition '[DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint flags);'
 Add-Type -AssemblyName System.Windows.Forms
-$log = Join-Path $PSScriptRoot "..\..\out\pending.log"
+$studio = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+$log = Join-Path $studio "out\pending.log"
 $until = (Get-Date).Date.AddHours(19).AddMinutes(30)
 function OnMains { [System.Windows.Forms.SystemInformation]::PowerStatus.PowerLineStatus -eq 'Online' }
 [WeeklyWick.Power]::SetThreadExecutionState(0x80000001) | Out-Null  # ES_CONTINUOUS | ES_SYSTEM_REQUIRED
 try {
   while ($true) {
     Add-Content -Path $log -Value ("== run {0:yyyy-MM-dd HH:mm} mains={1}" -f (Get-Date), (OnMains))
+    # Pick up renderer fixes without a manual update.cmd (this script is already loaded, so a pull is safe here).
+    & "C:\Program Files\Git\bin\bash.exe" -lc "cd '$($studio -replace '\\','/')' && git pull -q --ff-only || echo studio: pull skipped" *>> $log
     & cmd.exe /c "`"$PSScriptRoot\render-pending.cmd`""
     if ((Get-Date).Hour -lt 17 -or (Get-Date).AddMinutes(5) -ge $until -or -not (OnMains)) { break }
     Start-Sleep -Seconds 300

@@ -30,7 +30,9 @@ const PARTIAL = new Set(['FIRST TARGET', 'SECOND TARGET']);
 // Result figures (guides/추가지침_성과공개.md): free picks only, and only once the whole position has
 // closed, wins and losses alike. Partial take-profits still hold an open part, so they show no %.
 const num = (v) => (v === null || v === undefined || v === '' ? null : Number.isFinite(Number(v)) ? Number(v) : null);
-const finalFigures = (stamp, c) => (stamp && !PARTIAL.has(stamp) ? { resultPct: num(c.result_pct), vsSpyPct: num(c.vs_spy_pct) } : { resultPct: null, vsSpyPct: null });
+const finalFigures = (stamp, c) => (stamp && !PARTIAL.has(stamp) ? { resultPct: num(c.result_pct), vsSpyPct: num(c.vs_spy_pct), takePct: null } : { resultPct: null, vsSpyPct: null, takePct: PARTIAL.has(stamp) ? num(c.target_gain_pct) : null });
+// A partial take-profit shows only the gain on the part sold at that target (target_gain_pct), never the open rest.
+export const TAKE_SHARE = { 'FIRST TARGET': '25%', 'SECOND TARGET': '50%' };
 
 // Normalises the many ways exit_kind may be spelled in the ledger.
 export function exitStamp(kind, target) {
@@ -183,11 +185,11 @@ export function resolveCard(card, packet, queueDir, history = []) {
       const final = !PARTIAL.has(stamp);
       const isFree = free.has(`${bare(sym)}|${c.signal_week ?? ''}`) || free.has(`${bare(sym)}|`);
       out.rows.push({ symbol: bare(sym), company: signalFor(packet, sym)?.company ?? c.company, stamp, vsSpy: final && Number.isFinite(v) ? (v >= 0 ? 'BEAT SPY' : 'TRAILED SPY') : null,
-        ...(isFree ? finalFigures(stamp, c) : { resultPct: null, vsSpyPct: null }) });
+        ...(isFree ? finalFigures(stamp, c) : { resultPct: null, vsSpyPct: null, takePct: null }) });
     }
     const sc = packet.monthly_scorecard;
     // The monthly scorecard posts every month, good or bad, so its averages are shown whenever it is in the packet.
-    if (sc) out.stats.scorecard = { wins: sc.wins, losses: sc.losses, beatSpy: sc.beat_spy ?? sc.beat_spy_count, closed: num(sc.signals_closed), avgRet: num(sc.avg_ret_pct), avgExcess: num(sc.avg_excess_vs_spy_pct) };
+    if (sc) out.stats.scorecard = { month: /^\d{4}-\d{2}$/.test(sc.month ?? '') ? sc.month : null, wins: sc.wins, losses: sc.losses, beatSpy: sc.beat_spy ?? sc.beat_spy_count, closed: num(sc.signals_closed), avgRet: num(sc.avg_ret_pct), avgExcess: num(sc.avg_excess_vs_spy_pct) };
     const finals = out.rows.filter((r) => !PARTIAL.has(r.stamp));
     const losses = finals.filter((r) => r.stamp === 'STOPPED OUT').length;
     if (!card.mood && losses > finals.length - losses) out.mood = 'apology';

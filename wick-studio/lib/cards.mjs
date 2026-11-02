@@ -7,12 +7,13 @@ import { drawWick } from '../characters/rig.mjs';
 import { rng } from './motion.mjs';
 import { dataUri } from './scene.mjs';
 import { esc, textWidth, wrap } from './text.mjs';
+import { TAKE_SHARE } from './card-data.mjs';
 
 export const SIZES = { portrait: { W: 1080, H: 1350 }, wide: { W: 1600, H: 900 } };
 const DISCLAIMER = 'Not financial advice';
 // Cards that print result figures carry the longer line (추가지침_성과공개.md §4).
 const DISCLAIMER_RESULTS = "Past results don't guarantee future results. Not financial advice.";
-const showsFigures = (card) => (card.rows ?? []).some((r) => r.resultPct != null) || card.stats?.scorecard?.avgRet != null;
+const showsFigures = (card) => (card.rows ?? []).some((r) => r.resultPct != null || r.takePct != null) || card.stats?.scorecard?.avgRet != null;
 
 const STYLES = {
   A: { name: 'Scoreboard', bg: '#10141f', fg: '#eef1f7', muted: '#9aa3b5', panel: '#1a2030', rule: '#2a3142', band: '#1a2030', bandFg: '#eef1f7', ink: false },
@@ -186,6 +187,10 @@ function verdictBody(style, L, card, y0) {
   return s;
 }
 
+// Scorecard box title: the month it covers and that it counts every signal, not just the rows below.
+const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+const scoreLabel = (sc) => (sc.month ? `${MONTHS[Number(sc.month.slice(5, 7)) - 1]} · ALL SIGNALS` : 'MONTH SO FAR · ALL SIGNALS');
+
 // "+5.4%" / "−3.1%" and "+2.0pp vs SPY": result figures for free picks (see card-data.mjs).
 const signed = (v, unit) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}${unit}`;
 
@@ -199,8 +204,8 @@ function resultsBody(style, L, card, y0) {
   if (sc) {
     const split = L.W > L.H;
     s += `<rect x="${C.sx}" y="${C.sy}" width="${C.sw}" height="${split ? (avgLine ? 260 : 200) : avgLine ? 160 : 110}" rx="18" fill="${S.panel}"/>
-      <text x="${C.sx + 30}" y="${C.sy + 45}" font-family="Inter" font-size="24" font-weight="800" fill="${S.muted}" letter-spacing="3">MONTH SO FAR</text>`;
-    const parts = [`${sc.wins} W · ${sc.losses} L`, sc.beatSpy != null ? `${sc.beatSpy} beat SPY` : null].filter(Boolean);
+      <text x="${C.sx + 30}" y="${C.sy + 45}" font-family="Inter" font-size="24" font-weight="800" fill="${S.muted}" letter-spacing="3">${scoreLabel(sc)}</text>`;
+    const parts = [`${sc.closed != null ? `${sc.closed} closed · ` : ''}${sc.wins} W · ${sc.losses} L`, sc.beatSpy != null ? `${sc.beatSpy} beat SPY` : null].filter(Boolean);
     if (split) [...parts, avgLine].filter(Boolean).forEach((p, i) => { s += `<text x="${C.sx + 30}" y="${C.sy + 105 + i * 60}" font-family="Inter" font-size="${i < 2 ? 46 : 34}" font-weight="900" fill="${S.fg}">${p}</text>`; });
     else {
       s += `<text x="${C.sx + 30}" y="${C.sy + 90}" font-family="Inter" font-size="40" font-weight="900" fill="${S.fg}">${parts.join(' · ')}</text>`;
@@ -226,6 +231,11 @@ function resultsBody(style, L, card, y0) {
       const fx = C.rx + C.rw - STAMP_COL - 24;
       s += `<text x="${fx}" y="${y + 70 * k}" text-anchor="end" font-family="Inter" font-size="${(46 * Math.max(k, 0.8)).toFixed(0)}" font-weight="900" fill="${S.fg}">${signed(row.resultPct, '%')}</text>`;
       if (row.vsSpyPct != null) s += `<text x="${fx}" y="${y + 108 * k}" text-anchor="end" font-family="Inter" font-size="26" font-weight="700" fill="${S.muted}">${signed(row.vsSpyPct, 'pp')} vs SPY</text>`;
+    } else if (row.takePct != null) {
+      // Partial take-profit: the gain on the part sold at the target; the rest is still open.
+      const fx = C.rx + C.rw - STAMP_COL - 24;
+      s += `<text x="${fx}" y="${y + 70 * k}" text-anchor="end" font-family="Inter" font-size="${(46 * Math.max(k, 0.8)).toFixed(0)}" font-weight="900" fill="${S.fg}">${signed(row.takePct, '%')}</text>`;
+      s += `<text x="${fx}" y="${y + 108 * k}" text-anchor="end" font-family="Inter" font-size="26" font-weight="700" fill="${S.muted}">on ${TAKE_SHARE[row.stamp] ?? 'part'} sold · rest open</text>`;
     }
     y += rowH;
   }
