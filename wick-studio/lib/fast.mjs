@@ -244,7 +244,7 @@ function boardScene(L, seg, lt, wick) {
   const b = seg.board;
   const { W } = L;
   const cx = L.land ? W * 0.3 : W / 2;
-  const top = L.land ? 200 : 300;
+  const top = L.land ? 200 : 260;
   const op = (d) => clamp((lt - d) / 0.25).toFixed(2);
   let s = `<text x="${cx}" y="${top}" font-family="Inter" font-size="${L.land ? 40 : 44}" font-weight="800" fill="${HL}" text-anchor="middle" fill-opacity="${op(0)}" letter-spacing="2">${esc(b.label ?? 'TOP 10 BASKET')}</text>`;
   if (b.avg_ret_pct !== undefined) s += slamText(cx, top + (L.land ? 220 : 250), pct(b.avg_ret_pct), L.land ? 200 : 230, lt - 0.1, toneOf(b.avg_ret_pct));
@@ -255,7 +255,7 @@ function boardScene(L, seg, lt, wick) {
   s += `<text x="${cx}" y="${top + (L.land ? 360 : 410)}" font-family="Inter" font-size="${L.land ? 44 : 48}" font-weight="800" fill="#fff" text-anchor="middle" fill-opacity="${op(0.55)}">${esc(facts.join('  \u00b7  '))}</text>`;
   const leaders = (b.leaders ?? []).slice(0, 3);
   const lx = L.land ? W * 0.68 : W / 2;
-  const ly = L.land ? 300 : top + 560;
+  const ly = L.land ? 300 : top + 500;
   const rowH = L.land ? 150 : 150;
   leaders.forEach((r, i) => {
     const k = spring(lt - 0.8 - i * 0.25);
@@ -265,7 +265,7 @@ function boardScene(L, seg, lt, wick) {
       <text x="-360" y="20" font-family="Inter" font-size="64" font-weight="900" fill="#fff">$${esc(r.symbol)}</text>
       <text x="360" y="20" font-family="Inter" font-size="64" font-weight="900" fill="${toneOf(r.ret_pct)}" text-anchor="end">${pct(r.ret_pct)}</text></g>`;
   });
-  if (b.footnote) s += `<text x="${L.land ? lx : W / 2}" y="${ly + leaders.length * rowH + 10}" font-family="Inter" font-size="32" font-weight="600" fill="${COLORS.muted}" text-anchor="middle" fill-opacity="${op(1.6)}">${esc(b.footnote)}</text>`;
+  if (b.footnote) s += `<text x="${L.land ? lx : W / 2}" y="${ly + (leaders.length - 1) * rowH + 110}" font-family="Inter" font-size="32" font-weight="600" fill="${COLORS.muted}" text-anchor="middle" fill-opacity="${op(1.6)}">${esc(b.footnote)}</text>`;
   const pop = spring(lt - 0.15);
   s += wickAt(L.side.x, L.side.y + (1 - pop) * 300, L.side.s, wick);
   return s;
@@ -300,7 +300,8 @@ export function fastFrame(L, st) {
     case 'board': body = boardScene(L, seg, lt, st.wick); break;
     default: body = lineScene(L, seg, lt, st.wick, st.chunk, t);
   }
-  const bottomCap = seg.kind === 'hero' || seg.kind === 'line' || seg.kind === 'about' ? '' : caption(st.chunk, { x: L.W / 2, ...L.cap }, t);
+  // The end card already shows its line big, and a bottom caption would cover the Wick there.
+  const bottomCap = seg.kind === 'hero' || seg.kind === 'line' || seg.kind === 'about' || seg.kind === 'end' ? '' : caption(st.chunk, { x: L.W / 2, ...L.cap }, t);
   const flash = clamp(1 - lt / 0.12) * 0.35;
   const cx = L.W / 2, cy = L.H / 2;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${L.W}" height="${L.H}" viewBox="0 0 ${L.W} ${L.H}">
