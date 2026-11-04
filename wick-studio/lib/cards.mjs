@@ -57,7 +57,7 @@ export function stamp(style, label, x, y, size, rot = -7) {
 // LIVE on weekday race cards.
 function statusPill(style, type, x, y) {
   const kind = type === 'basket' ? 'basket' : type === 'weekly_confirm' ? 'confirmed' : type === 'results' ? 'graded' : type === 'track' ? 'tracked' : type === 'anatomy' ? 'explainer' : 'live';
-  const label = { basket: 'GRADED · Weekly close', confirmed: 'CONFIRMED · Weekly close', graded: 'GRADED · Exit report', tracked: 'TRACKED · Every free pick', explainer: 'HOW IT WORKS · Illustration', live: 'LIVE · Confirms at Friday close' }[kind];
+  const label = { basket: 'OPEN · Marked at the close', confirmed: 'CONFIRMED · Weekly close', graded: 'GRADED · Exit report', tracked: 'TRACKED · Every free pick', explainer: 'HOW IT WORKS · Illustration', live: 'LIVE · Confirms at Friday close' }[kind];
   const bg = { basket: '#7fb2ff', confirmed: '#22c47a', graded: '#7fb2ff', tracked: '#7fb2ff', explainer: '#d9d2c3', live: '#ffb020' }[kind];
   const live = kind === 'live';
   const size = 24, padX = 18, h = 44, w = textWidth(label, size, 0.62) + padX * 2 + (live ? 22 : 0);
