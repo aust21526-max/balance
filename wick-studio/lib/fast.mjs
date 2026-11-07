@@ -52,10 +52,10 @@ function background(L, t, mood) {
 
 function hud(L, { type, t, total, mood }) {
   const { W, H } = L;
-  const live = type !== 'weekly_confirm';
-  const p = live
-    ? pill(40, 34, 'LIVE · Confirms at Friday close', { bg: COLORS.live, size: 26, dot: true })
-    : pill(40, 34, 'CONFIRMED · Weekly close', { bg: COLORS.confirmed, size: 26 });
+  // Results videos report graded / marked figures, not a live race.
+  const p = type === 'weekly_confirm' ? pill(40, 34, 'CONFIRMED · Weekly close', { bg: COLORS.confirmed, size: 26 })
+    : type === 'results' ? pill(40, 34, 'GRADED · Marked at the close', { bg: '#7fb2ff', size: 26 })
+    : pill(40, 34, 'LIVE · Confirms at Friday close', { bg: COLORS.live, size: 26, dot: true });
   return `<rect x="0" y="0" width="${(W * clamp(t / total)).toFixed(1)}" height="8" fill="${ACCENT[mood] ?? HL}"/>
     ${p.svg}
     <text x="${W - 40}" y="72" font-family="Inter" font-size="28" font-weight="900" fill="${COLORS.text}" text-anchor="end" letter-spacing="6">WEEKLY WICK</text>
