@@ -14,7 +14,7 @@ export const SIZES = { portrait: { W: 1080, H: 1350 }, wide: { W: 1600, H: 900 }
 const DISCLAIMER = 'Not financial advice';
 // Cards that print result figures carry the longer line (추가지침_성과공개.md §4).
 const DISCLAIMER_RESULTS = "Past results don't guarantee future results. Not financial advice.";
-const showsFigures = (card) => (card.rows ?? []).some((r) => r.resultPct != null || r.takePct != null) || card.stats?.scorecard?.avgRet != null || card.stats?.board != null;
+const showsFigures = (card) => (card.rows ?? []).some((r) => r.resultPct != null || r.takePct != null || r.ret != null) || card.stats?.scorecard?.avgRet != null || card.stats?.board != null || ['index', 'copy', 'heatmap', 'leader', 'surge'].some((k) => card.stats?.[k]);
 
 const STYLES = {
   A: { name: 'Scoreboard', bg: '#10141f', fg: '#eef1f7', muted: '#9aa3b5', panel: '#1a2030', rule: '#2a3142', band: '#1a2030', bandFg: '#eef1f7', ink: false },
@@ -25,7 +25,7 @@ const STAMP_COLORS = {
   B: { QUALIFIED: '#1f8a54', VANISHED: '#6b6457', 'EARNINGS WEEK': '#d9631e', 'TAKE-PROFIT': '#1f8a54', 'FIRST TARGET': '#1f7f74', 'SECOND TARGET': '#1f8a54', 'STOPPED OUT': '#c0392b', 'TRAILING EXIT': '#2763c4', CANDIDATES: '#b7791f', 'BEAT SPY': '#1f8a54', 'TRAILED SPY': '#c0392b', 'STILL OPEN': '#b7791f' },
 };
 const STAMP_COL = 330; // right-hand column that holds a row's stamps
-const HEADER = { verdict: 'WEEKLY VERDICT', results: 'EXIT REPORT', race: 'CANDIDATE RACE', track: 'PICK TRACKER', anatomy: 'SIGNAL ANATOMY', basket: 'TOP 10 BASKET' };
+const HEADER = { verdict: 'WEEKLY VERDICT', results: 'EXIT REPORT', race: 'CANDIDATE RACE', track: 'PICK TRACKER', anatomy: 'SIGNAL ANATOMY', basket: 'TOP 10 BASKET', index: 'TOP 10 INDEX', copy: 'THE LIST, COPIED', heatmap: 'EVERY LIST', leader: 'LEADER', surge: 'ALSO FLAGGED' };
 
 let uid = 0;
 export function stamp(style, label, x, y, size, rot = -7) {
@@ -389,13 +389,146 @@ function anatomyBody(style, L, card, y0) {
   return s;
 }
 
+/* ── Performance cards (board blocks; see card-data.mjs BOARD_TEMPLATES) ── */
+const FLAME = { A: '#f0a33a', B: '#c46d12' };
+const GAIN = (style) => (style === 'A' ? '#22c47a' : '#1f8a54');
+const LOSS = (style) => (style === 'A' ? '#ef5350' : '#c0392b');
+const toneOf = (style, v) => (v > 0 ? GAIN(style) : v < 0 ? LOSS(style) : STYLES[style].muted);
+const t = (x, y, size, weight, fill, text, anchor = 'start', extra = '') => `<text x="${x.toFixed ? x.toFixed(1) : x}" y="${y.toFixed ? y.toFixed(1) : y}" font-family="Inter" font-size="${size}" font-weight="${weight}" fill="${fill}" text-anchor="${anchor}"${extra}>${esc(String(text))}</text>`;
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const shortDay = (iso) => { const [, m, d] = String(iso).split('-').map(Number); return m ? `${MON[m - 1]} ${d}` : String(iso); };
+
+/** Three figures in a row with hairlines between them. */
+function statRow(style, x, y, w, items, size = 56) {
+  const S = STYLES[style];
+  const cw = w / items.length;
+  let s = `<line x1="${x}" y1="${y}" x2="${x + w}" y2="${y}" stroke="${S.rule}" stroke-width="3"/>`;
+  items.forEach((it, i) => {
+    const cx = x + i * cw + (i ? 28 : 0);
+    if (i) s += `<line x1="${x + i * cw}" y1="${y + 24}" x2="${x + i * cw}" y2="${y + 150}" stroke="${S.rule}" stroke-width="3"/>`;
+    s += t(cx, y + 58, 26, 700, S.muted, it.k);
+    s += t(cx, y + 58 + size * 1.15, size, 900, it.color ?? S.fg, it.v);
+  });
+  return s;
+}
+
+function indexBody(style, L, card, y0) {
+  const S = STYLES[style], b = card.stats.index;
+  const pts = b.points.map(([d, w, sp]) => ({ d, w: Number(w), s: Number(sp) }));
+  const split = L.W > L.H;
+  const x0 = L.pad, cw = split ? 1000 : L.bodyW - 80, ch = split ? 470 : 520, y1 = y0 + 10;
+  const vals = pts.flatMap((p) => [p.w, p.s, 100]);
+  const lo = Math.min(...vals), hi = Math.max(...vals), span = Math.max(hi - lo, 2);
+  const ymin = lo - span * 0.1, ymax = hi + span * 0.1;
+  const X = (i) => x0 + (i / (pts.length - 1)) * cw;
+  const Y = (v) => y1 + (1 - (v - ymin) / (ymax - ymin)) * ch;
+  const path = (k) => pts.map((p, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(p[k]).toFixed(1)}`).join('');
+  let s = `<line x1="${x0}" y1="${Y(100)}" x2="${x0 + cw}" y2="${Y(100)}" stroke="${S.rule}" stroke-width="3" stroke-dasharray="6 10"/>`;
+  s += t(x0 + cw + 14, Y(100) + 9, 26, 700, S.muted, '100');
+  s += `<path d="${path('s')}" fill="none" stroke="${S.muted}" stroke-width="6" stroke-linejoin="round"/>`;
+  s += `<path d="${path('w')}" fill="none" stroke="${FLAME[style]}" stroke-width="9" stroke-linejoin="round"/>`;
+  const last = pts.at(-1), lx = X(pts.length - 1);
+  const gap = Math.abs(Y(last.w) - Y(last.s)) < 50 ? 25 : 0;
+  s += `<circle cx="${lx}" cy="${Y(last.w)}" r="12" fill="${FLAME[style]}"/>` + t(lx - 20, Y(last.w) - 26 - gap, 34, 900, S.fg, 'Top 10', 'end');
+  s += `<circle cx="${lx}" cy="${Y(last.s)}" r="10" fill="${S.muted}"/>` + t(lx - 20, Y(last.s) + 50 + gap, 34, 900, S.muted, 'SPY', 'end');
+  s += t(x0, y1 + ch + 44, 26, 700, S.muted, shortDay(pts[0].d)) + t(x0 + cw, y1 + ch + 44, 26, 700, S.muted, shortDay(last.d), 'end');
+  const idx = last.w - 100, spy = last.s - 100;
+  const sy = split ? y1 : y1 + ch + 80;
+  if (split) {
+    [['Top 10 Index', signed(idx, '%'), toneOf(style, idx)], ['SPY, same days', signed(spy, '%'), toneOf(style, spy)], ['Difference', signed(idx - spy, 'pp'), toneOf(style, idx - spy)]]
+      .forEach(([k, v, c], i) => { s += t(x0 + cw + 110, sy + 40 + i * 150, 26, 700, S.muted, k) + t(x0 + cw + 110, sy + 110 + i * 150, 64, 900, c, v); });
+  } else s += statRow(style, x0, sy, L.bodyW, [{ k: 'Top 10 Index', v: signed(idx, '%'), color: toneOf(style, idx) }, { k: 'SPY, same days', v: signed(spy, '%'), color: toneOf(style, spy) }, { k: 'Difference', v: signed(idx - spy, 'pp'), color: toneOf(style, idx - spy) }]);
+  s += t(x0, L.footY - 44, 22, 600, S.muted, `Every weekly top 10, equal weight, since ${b.since}${b.as_of ? ` · ${b.as_of}` : ''}`);
+  return s;
+}
+
+function copyBody(style, L, card, y0) {
+  const S = STYLES[style], b = card.stats.copy;
+  const x0 = L.pad, w = L.W > L.H ? 1000 : L.bodyW - 20;
+  const ours = Number(b.avg_ret_pct), spy = Number(b.spy_ret_pct);
+  // Bars share one scale; the zero line sits where the negative and positive extents meet, with
+  // room either side for the figure (≈260px at 76px type).
+  const negMax = Math.max(0, -ours, -spy), posMax = Math.max(0, ours, spy), FIG = 300;
+  const scale = (w - (negMax ? FIG : 0) - (posMax ? FIG : 0)) / Math.max(negMax + posMax, 0.1);
+  const zero = x0 + (negMax ? FIG : 0) + negMax * scale;
+  let s = t(x0, y0 + 40, 30, 800, S.muted, `${b.label}${b.as_of ? ` · ${b.as_of}` : ''}`);
+  const bar = (y, v, label, color) => {
+    const bw = Math.max(6, Math.abs(v) * scale), bx = v >= 0 ? zero : zero - bw;
+    return t(x0, y, 34, 800, S.fg, label) + `<rect x="${bx.toFixed(1)}" y="${y + 24}" width="${bw.toFixed(1)}" height="96" rx="14" fill="${color}"/>`
+      + t(v >= 0 ? bx + bw + 20 : bx - 20, y + 100, 76, 900, toneOf(style, v), signed(v, '%'), v >= 0 ? 'start' : 'end');
+  };
+  s += bar(y0 + 140, ours, 'Our list, avg per name', FLAME[style]);
+  s += bar(y0 + 340, spy, 'SPY, same days', S.muted);
+  s += `<line x1="${zero.toFixed(1)}" y1="${y0 + 150}" x2="${zero.toFixed(1)}" y2="${y0 + 480}" stroke="${S.fg}" stroke-opacity="0.35" stroke-width="3"/>`;
+  s += statRow(style, x0, y0 + 540, L.bodyW, [{ k: 'In profit', v: `${b.in_profit} of ${b.signals}` }, { k: 'vs SPY', v: signed(Number(b.avg_vs_spy_pp), 'pp'), color: toneOf(style, Number(b.avg_vs_spy_pp)) }], 64);
+  return s;
+}
+
+function heatmapBody(style, L, card, y0) {
+  const S = STYLES[style], b = card.stats.heatmap;
+  const weeks = b.weeks.slice(-6);
+  const cols = Math.max(...weeks.map((w) => w.cells.length));
+  const labW = 150, x0 = L.pad + labW, gw = L.bodyW - labW - 20;
+  const cell = Math.min(84, (gw - (cols - 1) * 8) / cols), gap = 8;
+  const rowH = Math.min(170, (L.footY - 140 - y0) / weeks.length);
+  const maxAbs = Math.max(5, ...weeks.flatMap((w) => w.cells.map((c) => Math.abs(Number(c.ret_pct)))));
+  const fill = (v) => {
+    const a = Math.min(1, 0.22 + 0.78 * Math.abs(v) / maxAbs);
+    return `fill="${v >= 0 ? GAIN(style) : LOSS(style)}" fill-opacity="${a.toFixed(2)}"`;
+  };
+  let s = '';
+  weeks.forEach((w, r) => {
+    const y = y0 + 20 + r * rowH;
+    s += t(L.pad, y + cell * 0.62, 30, 800, S.fg, w.label);
+    const sorted = [...w.cells].sort((a, c) => Number(c.ret_pct) - Number(a.ret_pct));
+    sorted.forEach((c, i) => {
+      const x = x0 + i * (cell + gap), v = Number(c.ret_pct);
+      s += `<rect x="${x.toFixed(1)}" y="${y}" width="${cell.toFixed(1)}" height="${cell.toFixed(1)}" rx="10" ${fill(v)}/>`;
+      s += t(x + cell / 2, y + cell / 2 + 8, Math.round(cell * 0.27), 900, S.fg, Math.abs(v) < 0.5 ? '0' : `${v > 0 ? '+' : '−'}${Math.abs(v).toFixed(0)}`, 'middle');
+      if (c.show) s += t(x + cell / 2, y + cell + 30, 24, 900, S.fg, `$${c.symbol}`, 'middle');
+    });
+    const up = w.cells.filter((c) => Number(c.ret_pct) > 0).length;
+    s += t(L.pad + L.bodyW, y + cell + (w.cells.some((c) => c.show) ? 62 : 34), 24, 700, S.muted, `${up} of ${w.cells.length} in profit`, 'end');
+  });
+  s += t(L.pad, L.footY - 44, 22, 600, S.muted, `Each square is one name in that week's top 10, % since its list${b.as_of ? ` · ${b.as_of}` : ''}`);
+  return s;
+}
+
+function leaderBody(style, L, card, y0) {
+  const S = STYLES[style], b = card.stats.leader;
+  const v = Number(b.ret_pct);
+  let s = t(L.pad, y0 + 150, 170, 900, S.fg, `$${b.symbol}`);
+  s += t(L.pad, y0 + 300, 130, 900, toneOf(style, v), signed(v, '%'));
+  s += t(L.pad, y0 + 360, 34, 800, S.muted, `since our ${b.list_label}${b.since ? ` (${b.since})` : ''}`);
+  s += t(L.pad, y0 + 412, 34, 900, S.fg, `${b.in_profit} of ${b.signals} in that list in profit${b.avg_vs_spy_pp != null ? ` · ${signed(Number(b.avg_vs_spy_pp), 'pp')} vs SPY` : ''}`);
+  if (card.chart) {
+    const cy = y0 + 460, ch = L.footY - 80 - cy;
+    if (ch > 220) s += chartStrip(L.pad, cy, L.W > L.H ? 900 : L.bodyW - 180, ch, card.chart, null);
+  }
+  return s;
+}
+
+function surgeBody(style, L, card, y0) {
+  const S = STYLES[style], b = card.stats.surge;
+  let s = t(L.pad, y0 + 30, 30, 800, S.muted, b.label ?? 'Flagged by our weekly close, never posted here');
+  const rowH = Math.min(190, (L.footY - 160 - y0) / b.rows.length);
+  b.rows.forEach((r, i) => {
+    const y = y0 + 70 + i * rowH, v = Number(r.ret_pct);
+    s += `<line x1="${L.pad}" y1="${y}" x2="${L.pad + L.rowSafeW}" y2="${y}" stroke="${S.rule}" stroke-width="3"/>`;
+    s += t(L.pad, y + rowH * 0.5, 72, 900, S.fg, `$${r.symbol}`) + t(L.pad, y + rowH * 0.5 + 46, 28, 700, S.muted, `since the ${r.since} signal`);
+    s += t(L.pad + L.rowSafeW, y + rowH * 0.5 + 10, 72, 900, toneOf(style, v), signed(v, '%'), 'end');
+  });
+  if (b.footnote) s += t(L.pad, L.footY - 44, 22, 600, S.muted, b.footnote);
+  return s;
+}
+
 export function renderCardSvg(card, { style = 'A', size = 'portrait', handle = '@weeklywick' } = {}) {
   const L = layout(size);
   const f = frame(style, L, card, handle);
   // The tracker lists past free picks with their latest grade: the exit report's row layout.
-  const body = { verdict: verdictBody, results: resultsBody, race: raceBody, track: resultsBody, anatomy: anatomyBody, basket: basketBody }[card.template](style, L, card, f.bodyY);
+  const body = { verdict: verdictBody, results: resultsBody, race: raceBody, track: resultsBody, anatomy: anatomyBody, basket: basketBody, index: indexBody, copy: copyBody, heatmap: heatmapBody, leader: leaderBody, surge: surgeBody }[card.template](style, L, card, f.bodyY);
   // The portrait anatomy card is a full-height diagram; Wick would sit on its second panel.
-  const mascot = card.template === 'anatomy' && L.W < L.H ? '' : wick(L, card);
+  const mascot = (card.template === 'anatomy' || card.template === 'index') && L.W < L.H ? '' : wick(L, card);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${L.W}" height="${L.H}" viewBox="0 0 ${L.W} ${L.H}">${f.svg}${body}${mascot}</svg>`;
 }
 

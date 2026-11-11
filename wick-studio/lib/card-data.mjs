@@ -20,7 +20,12 @@ import { packetNumbers, publicSymbols, qualifiedCount, signalFor, signals, weekD
 import { MOODS } from './script.mjs';
 import { chartPath, membersWord } from './validate.mjs';
 
-export const TEMPLATES = ['verdict', 'results', 'race', 'track', 'anatomy', 'basket'];
+export const TEMPLATES = ['verdict', 'results', 'race', 'track', 'anatomy', 'basket', 'index', 'copy', 'heatmap', 'leader', 'surge'];
+// Performance cards (2026-11-11, special growth period): they read wick/boards/<date>.json blocks written by
+// Claude from the ledger and daily prices — index (Top-10 Index vs SPY), copy ("if you'd copied the list"),
+// heatmap (weeks × names, names hidden except the leader), leader (the top name since its list, with its chart),
+// surge (signals that were never featured publicly but ran). Figures are printed as given, never from card.json.
+export const BOARD_TEMPLATES = { index: 'index', copy: 'copy', heatmap: 'heatmap', leader: 'leader', surge: 'surge' };
 const BANNED = /\b(scores?|scored|ranked|ranking|rank|top pick|number one|highest|best|guarantee[sd]?|sure thing|must buy|buy now|buy|sell)\b|#\s?1\b/i;
 const PRICE_OR_PCT = /%|\bpercent\b|\$\s?\d|\d+(\.\d+)?\s?(usd|dollars?)\b/i;
 const words = (s) => String(s ?? '').trim().split(/\s+/).filter(Boolean).length;
@@ -142,8 +147,8 @@ export function resolveCard(card, packet, queueDir, history = []) {
   const items = Array.isArray(card.items) ? card.items : [];
   const out = {
     template: t, title: card.title, subtitle: card.subtitle ?? '',
-    type: { verdict: 'weekly_confirm', results: 'results', track: 'track', basket: 'basket' }[t] ?? 'candidate_race',
-    mood: card.mood ?? { verdict: 'excited', results: 'calm', race: 'tense', track: 'calm', basket: 'excited' }[t] ?? 'calm',
+    type: { verdict: 'weekly_confirm', results: 'results', track: 'track', basket: 'basket' }[t] ?? (BOARD_TEMPLATES[t] ? 'basket' : 'candidate_race'),
+    mood: card.mood ?? { verdict: 'excited', results: 'calm', race: 'tense', track: 'calm', basket: 'excited', index: 'excited', copy: 'excited', heatmap: 'calm', leader: 'excited', surge: 'excited' }[t] ?? 'calm',
     flameSize: null, up: weekDirection(packet).up, rows: [], chart: null, stats: {},
   };
 
@@ -214,6 +219,26 @@ export function resolveCard(card, packet, queueDir, history = []) {
     if (card.chart) errors.push('basket card must not show a chart');
   }
 
+  if (BOARD_TEMPLATES[t]) {
+    const block = packet.board_extra?.[t];
+    if (!block) errors.push(`${t} card: wick/boards/<date>.json has no "${t}" block`);
+    else {
+      const bad = boardBlockErrors(t, block);
+      errors.push(...bad);
+      if (!bad.length) out.stats[t] = block;
+      if (t === 'leader' && block.symbol) {
+        const sym = String(block.symbol).toUpperCase();
+        out.rows = [{ symbol: sym, ret: num(block.ret_pct) }];
+        if (existsSync(chartPath(queueDir, sym))) out.chart = chartPath(queueDir, sym);
+        else warnings.push(`leader card: no charts/${sym}.png — made without the chart`);
+      }
+      const lead = t === 'copy' ? num(block.avg_ret_pct) : t === 'index' ? num(block.points?.at(-1)?.[1]) - 100 : null;
+      if (lead !== null && lead < 0 && !card.mood) out.mood = 'gloomy';
+    }
+    if (items.length) errors.push(`${t} card: names come from the board — remove items`);
+    if (card.chart && t !== 'leader') errors.push(`${t} card must not show a chart`);
+  }
+
   if (t === 'track') {
     const picks = trackedPicks(history);
     if (!picks.length) errors.push('track card: no free picks in the weekly_verdict packets of the last 8 weeks');
@@ -242,4 +267,31 @@ export function resolveCard(card, packet, queueDir, history = []) {
   const passCount = t === 'race' ? out.stats.candidates : qualifiedCount(packet);
   out.flameSize = 0.45 + Math.min(passCount, 10) * 0.095;
   return { errors, warnings, card: out };
+}
+
+// Shape checks for the performance-card board blocks. Figures must be finite numbers; the copy and index
+// cards always carry the SPY comparison and the in-profit count beside any gain (no figure without context).
+function boardBlockErrors(t, b) {
+  const e = [];
+  const fin = (v) => Number.isFinite(Number(v)) && v !== null && v !== '';
+  if (t === 'index') {
+    if (!Array.isArray(b.points) || b.points.length < 2) e.push('index: points needs at least two [date, index, spy] rows');
+    else if (!b.points.every((p) => Array.isArray(p) && p.length === 3 && fin(p[1]) && fin(p[2]))) e.push('index: every point is [date, index, spy] with numbers');
+    if (!b.since) e.push('index: since (e.g. "Oct 23") is required');
+  }
+  if (t === 'copy') for (const k of ['signals', 'in_profit', 'avg_ret_pct', 'spy_ret_pct', 'avg_vs_spy_pp']) if (!fin(b[k])) e.push(`copy: ${k} is required`);
+  if (t === 'copy' && !b.label) e.push('copy: label (e.g. "Oct 24 list") is required');
+  if (t === 'heatmap') {
+    if (!Array.isArray(b.weeks) || !b.weeks.length) e.push('heatmap: weeks is required');
+    else for (const w of b.weeks) if (!w.label || !Array.isArray(w.cells) || !w.cells.every((c) => fin(c.ret_pct))) e.push(`heatmap: week ${w.label ?? '?'} needs a label and cells with ret_pct`);
+  }
+  if (t === 'leader') {
+    if (!b.symbol || !fin(b.ret_pct) || !b.list_label) e.push('leader: symbol, ret_pct and list_label are required');
+    if (!fin(b.in_profit) || !fin(b.signals)) e.push('leader: in_profit and signals (its list) are required — the leader never shows alone');
+  }
+  if (t === 'surge') {
+    if (!Array.isArray(b.rows) || !b.rows.length || b.rows.length > 3) e.push('surge: rows needs 1–3 names');
+    else if (!b.rows.every((r) => r.symbol && fin(r.ret_pct) && r.since)) e.push('surge: each row needs symbol, ret_pct and since');
+  }
+  return e;
 }

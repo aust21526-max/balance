@@ -70,7 +70,7 @@ const isFailure = (p) => { try { return readFileSync(p, 'utf8').startsWith('# Re
 function withBoard(packet, wickDir, date) {
   const p = join(wickDir, 'boards', `${date}.json`);
   if (!existsSync(p)) return packet;
-  try { const b = JSON.parse(readFileSync(p, 'utf8')); return { ...packet, top10_board: b.top10_board ?? b }; } catch { return packet; }
+  try { const b = JSON.parse(readFileSync(p, 'utf8')); return { ...packet, top10_board: b.top10_board ?? b, board_extra: b }; } catch { return packet; }
 }
 
 function writeError(queueDir, date, err) {

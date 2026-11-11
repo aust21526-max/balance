@@ -61,6 +61,7 @@ export function loadPacket(path) {
     try {
       const b = JSON.parse(readFileSync(board, 'utf8'));
       p.top10_board = b.top10_board ?? b;
+      p.board_extra ??= b;
     } catch { /* an unreadable board is skipped; the basket scene/card then reports it missing */ }
   }
   return normalizePacket(p);
