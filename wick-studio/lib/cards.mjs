@@ -84,16 +84,33 @@ function frame(style, L, card, handle) {
   s += statusPill(style, card.type, L.pad, (L.band - 44) / 2);
   s += `<text x="${L.W - L.pad}" y="${L.band / 2 - 4}" font-family="Inter" font-size="30" font-weight="900" fill="${S.bandFg}" text-anchor="end" letter-spacing="6">WEEKLY WICK</text>`;
   s += `<text x="${L.W - L.pad}" y="${L.band / 2 + 28}" font-family="Inter" font-size="20" font-weight="700" fill="${S.bandFg}" fill-opacity="0.7" text-anchor="end" letter-spacing="4">${HEADER[card.template]}</text>`;
-  // Title + subtitle
-  let ts = L.titleSize, tl = wrap(card.title, ts, L.titleMax, 0.6);
-  while (ts > 62 && (tl.length > 2 || (tl.length === 2 && !tl[1].includes(' ')))) { ts -= 4; tl = wrap(card.title, ts, L.titleMax, 0.6); }
-  tl = tl.slice(0, 2);
-  tl.forEach((line, i) => { s += `<text x="${L.pad}" y="${L.titleY + i * ts * 1.05}" font-family="Inter" font-size="${ts}" font-weight="900" fill="${S.fg}">${esc(line)}</text>`; });
-  const subY = L.titleY + (tl.length - 1) * ts * 1.05 + L.subSize * 1.6;
-  if (card.subtitle) {
-    // Shrink a long subtitle to stay on one line (Inter SemiBold ≈ 0.53 em per character).
-    const subSize = Math.max(28, Math.min(L.subSize, L.titleMax / (card.subtitle.length * 0.53)));
-    s += `<text x="${L.pad}" y="${subY}" font-family="Inter" font-size="${subSize.toFixed(1)}" font-weight="600" fill="${S.muted}">${esc(card.subtitle)}</text>`;
+  // Performance cards lead with one huge figure (the hook) in its gain/loss colour; the title drops to a
+  // single smaller line under it. Other cards keep the big title + subtitle.
+  let subY;
+  if (card.hook) {
+    const h = card.hook;
+    const txt = h.text ?? `${h.value >= 0 ? '+' : '−'}${Math.abs(h.value).toFixed(1)}${h.unit}`;
+    const col = h.value == null ? S.fg : h.value > 0 ? (style === 'A' ? '#22c47a' : '#1f8a54') : h.value < 0 ? (style === 'A' ? '#ef5350' : '#c0392b') : S.fg;
+    const hs = Math.min(L.W > L.H ? 190 : 240, L.titleMax / (txt.length * 0.62));
+    const hy = L.band + hs * 0.98;
+    s += `<text x="${L.pad - 6}" y="${hy.toFixed(1)}" font-family="Inter" font-size="${hs.toFixed(0)}" font-weight="900" fill="${col}" letter-spacing="-4">${esc(txt)}</text>`;
+    const ks = Math.max(28, Math.min(40, L.titleMax / (h.kicker.length * 0.55)));
+    s += `<text x="${L.pad}" y="${(hy + ks * 1.6).toFixed(1)}" font-family="Inter" font-size="${ks.toFixed(1)}" font-weight="800" fill="${S.fg}">${esc(h.kicker)}</text>`;
+    const line = card.subtitle ? `${card.title} — ${card.subtitle}` : card.title;
+    const ts2 = Math.max(24, Math.min(32, L.titleMax / (line.length * 0.55)));
+    s += `<text x="${L.pad}" y="${(hy + ks * 1.6 + ts2 * 1.7).toFixed(1)}" font-family="Inter" font-size="${ts2.toFixed(1)}" font-weight="700" fill="${S.muted}">${esc(line)}</text>`;
+    subY = hy + ks * 1.6 + ts2 * 1.7 - 10;
+  } else {
+    let ts = L.titleSize, tl = wrap(card.title, ts, L.titleMax, 0.6);
+    while (ts > 62 && (tl.length > 2 || (tl.length === 2 && !tl[1].includes(' ')))) { ts -= 4; tl = wrap(card.title, ts, L.titleMax, 0.6); }
+    tl = tl.slice(0, 2);
+    tl.forEach((line, i) => { s += `<text x="${L.pad}" y="${L.titleY + i * ts * 1.05}" font-family="Inter" font-size="${ts}" font-weight="900" fill="${S.fg}">${esc(line)}</text>`; });
+    subY = L.titleY + (tl.length - 1) * ts * 1.05 + L.subSize * 1.6;
+    if (card.subtitle) {
+      // Shrink a long subtitle to stay on one line (Inter SemiBold ~ 0.53 em per character).
+      const subSize = Math.max(28, Math.min(L.subSize, L.titleMax / (card.subtitle.length * 0.53)));
+      s += `<text x="${L.pad}" y="${subY}" font-family="Inter" font-size="${subSize.toFixed(1)}" font-weight="600" fill="${S.muted}">${esc(card.subtitle)}</text>`;
+    }
   }
   // Footer
   const figures = showsFigures(card);
@@ -416,7 +433,7 @@ function indexBody(style, L, card, y0) {
   const S = STYLES[style], b = card.stats.index;
   const pts = b.points.map(([d, w, sp]) => ({ d, w: Number(w), s: Number(sp) }));
   const split = L.W > L.H;
-  const x0 = L.pad, cw = split ? 1000 : L.bodyW - 80, ch = split ? 470 : 520, y1 = y0 + 10;
+  const x0 = L.pad, cw = split ? 1000 : L.bodyW - 80, ch = Math.min(split ? 470 : 520, L.footY - y0 - (split ? 120 : 330)), y1 = y0 + 10;
   const vals = pts.flatMap((p) => [p.w, p.s, 100]);
   const lo = Math.min(...vals), hi = Math.max(...vals), span = Math.max(hi - lo, 2);
   const ymin = lo - span * 0.1, ymax = hi + span * 0.1;
@@ -496,21 +513,19 @@ function heatmapBody(style, L, card, y0) {
 
 function leaderBody(style, L, card, y0) {
   const S = STYLES[style], b = card.stats.leader;
-  const v = Number(b.ret_pct);
-  let s = t(L.pad, y0 + 150, 170, 900, S.fg, `$${b.symbol}`);
-  s += t(L.pad, y0 + 300, 130, 900, toneOf(style, v), signed(v, '%'));
-  s += t(L.pad, y0 + 360, 34, 800, S.muted, `since our ${b.list_label}${b.since ? ` (${b.since})` : ''}`);
-  s += t(L.pad, y0 + 412, 34, 900, S.fg, `${b.in_profit} of ${b.signals} in that list in profit${b.avg_vs_spy_pp != null ? ` · ${signed(Number(b.avg_vs_spy_pp), 'pp')} vs SPY` : ''}`);
+  const ctx = `${b.in_profit} of ${b.signals} in that list in profit${b.avg_vs_spy_pp != null ? ` · ${signed(Number(b.avg_vs_spy_pp), 'pp')} vs SPY` : ''}`;
+  let s = t(L.pad, y0 + 10, 30, 800, S.fg, ctx);
+  if (b.since) s += t(L.pad, y0 + 52, 26, 700, S.muted, `In at the ${b.since}`);
   if (card.chart) {
-    const cy = y0 + 460, ch = L.footY - 80 - cy;
-    if (ch > 220) s += chartStrip(L.pad, cy, L.W > L.H ? 900 : L.bodyW - 180, ch, card.chart, null);
+    const cy = y0 + 90, ch = L.footY - 70 - cy;
+    if (ch > 220) s += chartStrip(L.pad, cy, L.W > L.H ? 900 : L.bodyW - 170, ch, card.chart, null);
   }
   return s;
 }
 
 function surgeBody(style, L, card, y0) {
   const S = STYLES[style], b = card.stats.surge;
-  let s = t(L.pad, y0 + 30, 30, 800, S.muted, b.label ?? 'Flagged by our weekly close, never posted here');
+  let s = card.hook ? '' : t(L.pad, y0 + 30, 30, 800, S.muted, b.label ?? 'Flagged by our weekly close, never posted here');
   const rowH = Math.min(190, (L.footY - 160 - y0) / b.rows.length);
   b.rows.forEach((r, i) => {
     const y = y0 + 70 + i * rowH, v = Number(r.ret_pct);

@@ -44,11 +44,13 @@ function args() {
   if (argv[0] === '--pending') return { pending: true, wickDir, days: Number(argv[1] ?? 10) };
   const [date, ...flags] = argv;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date ?? '')) {
-    console.error('usage: ./render.sh <YYYY-MM-DD> [--wide] [--card [--style A|B]]\n       ./render.sh --pending [days]');
+    console.error('usage: ./render.sh <YYYY-MM-DD> [--wide] [--card [--style A|B] [--name card-x]]\n       ./render.sh --pending [days]');
     process.exit(2);
   }
   const styleAt = flags.indexOf('--style');
+  const nameAt = flags.indexOf('--name');
   return {
+    name: nameAt >= 0 ? flags[nameAt + 1] : 'card',
     date, wickDir, queueDir: join(wickDir, 'queue', date),
     card: flags.includes('--card'), wide: flags.includes('--wide'),
     style: styleAt >= 0 ? flags[styleAt + 1] : CFG.cards.style,
@@ -267,8 +269,9 @@ async function renderVideo({ date, wickDir, queueDir, wide }) {
   console.log(`done: ${mp4}`);
 }
 
-function renderCard({ date, wickDir, queueDir, wide, style }) {
-  const cardPath = join(queueDir, 'card.json');
+// A queue folder may hold several cards for one day: card.json -> card.png, card-<name>.json -> card-<name>.png.
+function renderCard({ date, wickDir, queueDir, wide, style, name = 'card' }) {
+  const cardPath = join(queueDir, `${name}.json`);
   if (!existsSync(cardPath)) throw new RenderError([`card.json not found at ${cardPath}`]);
   let raw;
   try { raw = JSON.parse(readFileSync(cardPath, 'utf8')); } catch (e) { throw new RenderError([`card.json is not valid JSON: ${e.message}`]); }
@@ -277,7 +280,7 @@ function renderCard({ date, wickDir, queueDir, wide, style }) {
   const history = ['track', 'results'].includes(raw.template) ? recentPackets(wickDir, date, 56) : [];
   const { errors, warnings, card } = resolveCard(raw, packetPath ? withBoard(loadPacket(packetPath), wickDir, date) : null, queueDir, history);
   if (errors.length) throw new RenderError(errors, warnings);
-  const out = join(queueDir, 'card.png');
+  const out = join(queueDir, `${name}.png`);
   writeFileSync(out, svgToPng(renderCardSvg(card, { style, size: wide ? 'wide' : 'portrait', handle: CFG.handle })));
   clearError(queueDir, 'card');
   for (const w of warnings) console.warn(`warning: ${w}`);
@@ -313,8 +316,9 @@ async function renderPending({ wickDir, days }) {
     const queueDir = join(queue, date);
     const charts = join(queueDir, 'charts');
     const chartTime = existsSync(charts) ? Math.max(0, ...readdirSync(charts).map((f) => mtime(join(charts, f)))) : 0;
+    const cardNames = readdirSync(queueDir).filter((f) => /^card(-[a-z0-9]+)?\.json$/.test(f)).map((f) => f.slice(0, -5)).sort();
     const jobs = [
-      { kind: 'card', input: join(queueDir, 'card.json'), output: join(queueDir, 'card.png'), extra: chartTime },
+      ...cardNames.map((name) => ({ kind: 'card', name, input: join(queueDir, `${name}.json`), output: join(queueDir, `${name}.png`), extra: chartTime })),
       { kind: 'video', input: join(queueDir, 'script.md'), output: join(queueDir, 'render.mp4'), extra: chartTime },
     ];
     for (const job of jobs) {
@@ -324,8 +328,8 @@ async function renderPending({ wickDir, days }) {
       if (mtime(job.output) >= newestInput) continue; // up to date
       const errPath = join(queueDir, 'error.md');
       if (mtime(errPath) >= newestInput && isFailure(errPath)) continue; // already failed on these inputs
-      const opts = { date, wickDir, queueDir, wide: false, style: CFG.cards.style };
-      console.log(`== ${date} ${job.kind}`);
+      const opts = { date, wickDir, queueDir, wide: false, style: CFG.cards.style, name: job.name };
+      console.log(`== ${date} ${job.kind}${job.name && job.name !== 'card' ? ` ${job.name}` : ''}`);
       try {
         if (job.kind === 'card') renderCard(opts); else await renderVideo(opts);
         done++;

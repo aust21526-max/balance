@@ -215,12 +215,17 @@ export function resolveCard(card, packet, queueDir, history = []) {
       if (out.stats.board.inProfit === null) errors.push('basket card: top10_board.in_profit is required (leaders are never shown without it)');
       if (out.stats.board.avgRet < 0 && !card.mood) out.mood = 'gloomy';
     }
+    if (out.stats.board) out.hook = { value: out.stats.board.avgRet, unit: '%', kicker: `avg per signal · ${out.stats.board.inProfit} of ${out.stats.board.signals} in profit` };
     if (items.length) errors.push('basket card: leaders come from packet.top10_board — remove items');
     if (card.chart) errors.push('basket card must not show a chart');
   }
 
   if (BOARD_TEMPLATES[t]) {
-    const block = packet.board_extra?.[t];
+    // A leader card may name a stock: its figures come from the board's spotlight block (free picks and
+    // published leaders only, written by board-blocks.mjs).
+    const want = t === 'leader' && card.symbol ? String(card.symbol).toUpperCase() : null;
+    const block = want ? packet.board_extra?.spotlight?.[want] && { symbol: want, ...packet.board_extra.spotlight[want] } : packet.board_extra?.[t];
+    if (want && !block) errors.push(`leader card: ${want} is not in the board's spotlight block (free picks and leaders only)`);
     if (!block) errors.push(`${t} card: wick/boards/<date>.json has no "${t}" block`);
     else {
       const bad = boardBlockErrors(t, block);
@@ -234,6 +239,7 @@ export function resolveCard(card, packet, queueDir, history = []) {
       }
       const lead = t === 'copy' ? num(block.avg_ret_pct) : t === 'index' ? num(block.points?.at(-1)?.[1]) - 100 : null;
       if (lead !== null && lead < 0 && !card.mood) out.mood = 'gloomy';
+      if (!bad.length) out.hook = hookFor(t, block);
     }
     if (items.length) errors.push(`${t} card: names come from the board — remove items`);
     if (card.chart && t !== 'leader') errors.push(`${t} card must not show a chart`);
@@ -294,4 +300,15 @@ function boardBlockErrors(t, b) {
     else if (!b.rows.every((r) => r.symbol && fin(r.ret_pct) && r.since)) e.push('surge: each row needs symbol, ret_pct and since');
   }
   return e;
+}
+
+// The scroll-stopping figure printed huge at the top of a performance card, with a one-line kicker.
+const sgn = (v, unit) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}${unit}`;
+function hookFor(t, b) {
+  if (t === 'index') { const l = b.points.at(-1); const w = Number(l[1]) - 100, s = Number(l[2]) - 100; return { value: w - s, unit: 'pp', kicker: `Top 10 Index ${sgn(w, '%')} vs SPY ${sgn(s, '%')} since ${b.since}` }; }
+  if (t === 'copy') return { value: Number(b.avg_ret_pct), unit: '%', kicker: `${b.label} · SPY ${sgn(Number(b.spy_ret_pct), '%')} over the same days` };
+  if (t === 'leader') return { value: Number(b.ret_pct), unit: '%', kicker: `$${b.symbol} since our ${b.list_label}` };
+  if (t === 'surge') { const r = b.rows[0]; return { value: Number(r.ret_pct), unit: '%', kicker: `$${r.symbol} since the ${r.since} signal — never posted here` }; }
+  if (t === 'heatmap') { const cells = b.weeks.flatMap((w) => w.cells); const up = cells.filter((c) => Number(c.ret_pct) > 0).length; return { value: null, text: `${up} of ${cells.length}`, kicker: `names in profit across the last ${b.weeks.length} lists` }; }
+  return null;
 }
