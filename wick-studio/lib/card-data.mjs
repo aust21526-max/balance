@@ -215,7 +215,13 @@ export function resolveCard(card, packet, queueDir, history = []) {
       if (out.stats.board.inProfit === null) errors.push('basket card: top10_board.in_profit is required (leaders are never shown without it)');
       if (out.stats.board.avgRet < 0 && !card.mood) out.mood = 'gloomy';
     }
-    if (out.stats.board) out.hook = { value: out.stats.board.avgRet, unit: '%', kicker: `avg per signal · ${out.stats.board.inProfit} of ${out.stats.board.signals} in profit` };
+    // The hook is the basket's leader (the panel below already carries the average, the in-profit count and SPY).
+    if (out.stats.board) {
+      const lead = out.rows[0];
+      out.hook = lead && lead.ret > 0
+        ? { value: lead.ret, unit: '%', kicker: `$${lead.symbol}, the leader · ${out.stats.board.inProfit} of ${out.stats.board.signals} in profit` }
+        : { value: out.stats.board.avgRet, unit: '%', kicker: `avg per signal · ${out.stats.board.inProfit} of ${out.stats.board.signals} in profit` };
+    }
     if (items.length) errors.push('basket card: leaders come from packet.top10_board — remove items');
     if (card.chart) errors.push('basket card must not show a chart');
   }
