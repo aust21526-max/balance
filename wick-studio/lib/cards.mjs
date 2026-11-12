@@ -490,6 +490,8 @@ function heatmapBody(style, L, card, y0) {
   const rowH = Math.min(170, (L.footY - 140 - y0) / weeks.length);
   const maxAbs = Math.max(5, ...weeks.flatMap((w) => w.cells.map((c) => Math.abs(Number(c.ret_pct)))));
   const fill = (v) => {
+    // Under half a percent either way reads as flat: a neutral square, not a red or green one.
+    if (Math.abs(v) < 0.5) return `fill="${S.rule}"`;
     const a = Math.min(1, 0.22 + 0.78 * Math.abs(v) / maxAbs);
     return `fill="${v >= 0 ? GAIN(style) : LOSS(style)}" fill-opacity="${a.toFixed(2)}"`;
   };
@@ -505,7 +507,8 @@ function heatmapBody(style, L, card, y0) {
       if (c.show) s += t(x + cell / 2, y + cell + 30, 24, 900, S.fg, `$${c.symbol}`, 'middle');
     });
     const up = w.cells.filter((c) => Number(c.ret_pct) > 0).length;
-    s += t(L.pad + L.bodyW, y + cell + (w.cells.some((c) => c.show) ? 62 : 34), 24, 700, S.muted, `${up} of ${w.cells.length} in profit`, 'end');
+    // The count sits under the week label (left), clear of Wick in the bottom-right corner.
+    s += t(L.pad, y + cell * 0.62 + 36, 22, 700, S.muted, `${up} of ${w.cells.length} green`);
   });
   s += t(L.pad, L.footY - 44, 22, 600, S.muted, `Each square is one name in that week's top 10, % since its list${b.as_of ? ` · ${b.as_of}` : ''}`);
   return s;
