@@ -522,6 +522,16 @@ function leaderBody(style, L, card, y0) {
   if (card.chart) {
     const cy = y0 + 90, ch = L.footY - 70 - cy;
     if (ch > 220) s += chartStrip(L.pad, cy, L.W > L.H ? 900 : L.bodyW - 170, ch, card.chart, null);
+  } else if (Array.isArray(b.milestones) && b.milestones.length) {
+    // The trail: one dot per milestone on a vertical line, date on the left, what happened on the right.
+    const ms = b.milestones.slice(0, 6), top = y0 + 140, gap = Math.min(130, (L.footY - 120 - top) / Math.max(1, ms.length - 1 || 1));
+    s += `<line x1="${L.pad + 200}" y1="${top}" x2="${L.pad + 200}" y2="${top + gap * (ms.length - 1)}" stroke="${S.rule}" stroke-width="6"/>`;
+    ms.forEach((m, i) => {
+      const y = top + i * gap, last = i === ms.length - 1;
+      s += `<circle cx="${L.pad + 200}" cy="${y}" r="${last ? 16 : 12}" fill="${last ? GAIN(style) : S.fg}"/>`;
+      s += t(L.pad + 170, y + 11, 30, 800, S.muted, m.date, 'end');
+      s += t(L.pad + 236, y + 11, 32, last ? 900 : 700, S.fg, m.label);
+    });
   }
   return s;
 }
