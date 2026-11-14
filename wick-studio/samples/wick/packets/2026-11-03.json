@@ -1,0 +1,84 @@
+{
+  "_sample": "SAMPLE DATA for render tests only \u2014 tickers are not real",
+  "packet_type": "daily",
+  "date": "2026-11-03",
+  "summary": {
+    "candidates": 12,
+    "qualified": 0,
+    "market_week": "down"
+  },
+  "signals": [
+    {
+      "symbol": "CAND0",
+      "company": "Candidate 0",
+      "type": "TB",
+      "status": "CANDIDATE",
+      "tags": [
+        "oversold bounce",
+        "volume surge"
+      ],
+      "publish_eligible": false,
+      "publish": "hold"
+    },
+    {
+      "symbol": "CAND1",
+      "company": "Candidate 1",
+      "type": "TB",
+      "status": "CANDIDATE",
+      "tags": [
+        "volume surge",
+        "band squeeze"
+      ],
+      "publish_eligible": false,
+      "publish": "hold"
+    },
+    {
+      "symbol": "CAND2",
+      "company": "Candidate 2",
+      "type": "TB",
+      "status": "CANDIDATE",
+      "tags": [
+        "band squeeze"
+      ],
+      "publish_eligible": false,
+      "publish": "hold"
+    },
+    {
+      "symbol": "CAND3",
+      "company": "Candidate 3",
+      "type": "TB",
+      "status": "CANDIDATE",
+      "tags": [
+        "oversold bounce",
+        "band squeeze"
+      ],
+      "publish_eligible": false,
+      "publish": "hold"
+    },
+    {
+      "symbol": "CAND4",
+      "company": "Candidate 4",
+      "type": "TB",
+      "status": "CANDIDATE",
+      "tags": [
+        "volume surge"
+      ],
+      "publish_eligible": false,
+      "publish": "hold"
+    },
+    {
+      "symbol": "CAND5",
+      "company": "Candidate 5",
+      "type": "TB",
+      "status": "CANDIDATE",
+      "tags": [
+        "band squeeze",
+        "earnings soon"
+      ],
+      "publish_eligible": false,
+      "publish": "hold"
+    }
+  ],
+  "free_picks": [],
+  "notes": []
+}
